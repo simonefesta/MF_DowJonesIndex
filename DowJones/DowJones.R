@@ -1,4 +1,6 @@
 # DOW JONES INDEX ANALYSIS
+library(rstudioapi)
+
 ###################### Prelievo dei dati da Yahoo Finance###############
 
 # Calcolo le date di inizio e fine per l'intervallo di tre anni
@@ -17,16 +19,22 @@ url <- paste0("https://query1.finance.yahoo.com/v7/finance/download/%5EDJI?perio
 # Imposto il percorso di destinazione per il salvataggio del file CSV
 
 # Imposto la directory di lavoro sulla directory attuale (ovvero la cartella "dowjones")
-setwd(getwd())
+current_file <- normalizePath(rstudioapi::getSourceEditorContext()$path)
+print(current_file)
+current_dir <- dirname(current_file)
+print(current_dir)
+
 
 # Specifica il nome del file con la data corrente (salvo i dati in dowjones-<dataodierna>)
 nome_file <- paste("dowjones_", format(Sys.Date(), "%d-%m-%Y"), ".csv", sep = "")
+
+
 
 # Specifica il percorso relativo alla sottocartella (questo csv lo salvo nella sottocartella "data")
 datafolder <- "data"
 
 #specifico quindi il path completo del file, che parte dalla directory attuale, va in "data", e salva nel csv precedentemente dichiarato.
-file_path <- file.path(getwd(), datafolder, nome_file) 
+file_path <- file.path(current_dir, datafolder, nome_file) 
 # Scarica il file CSV dell'indice Dow Jones degli ultimi tre anni
 download.file(url, destfile = file_path, method = "auto")
 
@@ -109,7 +117,7 @@ rendimenti <- paste("rendimentigiornalieri_", format(Sys.Date(), "%d-%m-%Y"), ".
 datafolder <- "data"
 
 #specifico quindi il path completo del file, che parte dalla directory attuale, va in "data", e salva nel csv precedentemente dichiarato.
-rendimenti_path <- file.path(getwd(), datafolder, rendimenti) 
+rendimenti_path <- file.path(current_dir, datafolder, rendimenti) 
 write.csv(returns_data, rendimenti_path, row.names = TRUE)
 
 ###################### TODO
