@@ -1,5 +1,4 @@
 # DOW JONES INDEX ANALYSIS
-library(rstudioapi)
 
 ###################### Prelievo dei dati da Yahoo Finance###############
 
@@ -120,4 +119,65 @@ datafolder <- "data"
 rendimenti_path <- file.path(current_dir, datafolder, rendimenti) 
 write.csv(returns_data, rendimenti_path, row.names = TRUE)
 
-###################### TODO
+###################### PARTE 2: JDX INDEX OPTIONS #####################################################
+library(quantmod)
+# Il nome della variabile contenente i dati include il giorno corrente in cui li scarico.
+# Ottengo la data odierna
+data_odierna <- format(Sys.Date(), "%Y-%m-%d")
+
+# Crea il nome della variabile con la data odierna
+DJX_Opt <- paste0("DJX_Opt_", data_odierna)
+
+start_value <- 338.77 #valore iniziale dell'osservazione, data 14/07/23 (ok anche per il 15/07, mercati chiusi)
+
+DJX_Opt <- getOptionChain("^DJX", Exp="2023-09-15", src='yahoo')
+class(DJX_Opt)
+length(DJX_Opt)
+show(DJX_Opt[[1]])
+class(DJX_Opt[[1]])
+nrow(DJX_Opt[[1]])
+show(DJX_Opt[[2]])
+class(DJX_Opt[[2]])
+nrow(DJX_Opt[[2]])
+show(DJX_Opt[[1]]$Strike)
+show(DJX_Opt[[2]]$Strike)
+Strike <- sort(union(DJX_Opt[[1]]$Strike, DJX_Opt[[2]]$Strike))
+show(Strike)
+length(Strike)
+Call_Indx <- sapply(Strike, function(x) which(DJX_Opt[[1]]$Strike==x)[1])
+Put_Indx <- sapply(Strike, function(x) which(DJX_Opt[[2]]$Strike==x)[1])
+DJX_Opt_df <- data.frame(Indx=1:length(Strike),
+                                      Call_ContractID=DJX_Opt[[1]]$ContractID[Call_Indx], 
+                                      Call_Bid=DJX_Opt[[1]]$Bid[Call_Indx],
+                                      Call_Ask=DJX_Opt[[1]]$Ask[Call_Indx],
+                                      Call_Vol=DJX_Opt[[1]]$Vol[Call_Indx],
+                                      Call_OI=DJX_Opt[[1]]$OI[Call_Indx],
+                                      Call_PrChg=DJX_Opt[[1]]$Chg[Call_Indx],
+                                      Call_PrChgPct=DJX_Opt[[1]]$ChgPct[Call_Indx],
+                                      Call_LastTrTime=DJX_Opt[[1]]$LastTradeTime[Call_Indx],
+                                      Call_LastPr=DJX_Opt[[1]]$Last[Call_Indx],
+                                      Call_ImplVol=DJX_Opt[[1]]$IV[Call_Indx],
+                                      Call_ITM=DJX_Opt[[1]]$ITM[Call_Indx],
+                                      Strike=Strike,
+                                      Put_ITM=DJX_Opt[[2]]$ITM[Put_Indx],
+                                      Put_ImplVol=DJX_Opt[[2]]$IV[Put_Indx],
+                                      Put_LastPr=DJX_Opt[[2]]$Last[Put_Indx],
+                                      Put_LastTrTime=DJX_Opt[[2]]$LastTradeTime[Put_Indx],
+                                      Put_PrChgPct=DJX_Opt[[2]]$ChgPct[Put_Indx],
+                                      Put_PrChg=DJX_Opt[[2]]$Chg[Put_Indx],
+                                      Put_OI=DJX_Opt[[2]]$OI[Put_Indx],
+                                      Put_Vol=DJX_Opt[[2]]$Vol[Put_Indx],
+                                      Put_Ask=DJX_Opt[[2]]$Ask[Put_Indx],
+                                      Put_Bid=DJX_Opt[[2]]$Bid[Put_Indx],
+                                      Put_ContractID=DJX_Opt[[2]]$ContractID[Put_Indx])
+  head(DJX_Opt_df,10)                                   
+  tail(DJX_Opt_df,10)
+  #prendo la directory corrente, e poi vado nella sottodirectory "options".
+  current_file <- normalizePath(rstudioapi::getSourceEditorContext()$path)
+  current_dir <- dirname(current_file)
+  datafolder2 <- "options"
+  
+  file_path <- file.path(current_dir, datafolder2, paste0("DJX_Opt_", data_odierna,".csv"))
+  print(file_path)
+  write.csv(DJX_Opt_df, file_path)
+
