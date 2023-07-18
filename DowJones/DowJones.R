@@ -2,9 +2,9 @@
 
 ###################### Prelievo dei dati da Yahoo Finance###############
 
-# Calcolo le date di inizio e fine per l'intervallo di tre anni
-start_date <- as.Date(Sys.Date() - 3*365)
-end_date <- Sys.Date()
+# Calcolo le date di inizio e fine per l'intervallo di tre anni, a partire dal 2023-07-15
+start_date <- "2020-07-15"
+end_date <- "2023-07-15"
 
 # Formato le date nel formato richiesto dall'URL
 start_timestamp <- as.POSIXct(start_date)
