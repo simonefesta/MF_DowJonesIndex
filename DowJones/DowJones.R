@@ -221,3 +221,73 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
   print(file_path)
   write.csv(DJX_Opt_df, file_path)
 
+  
+########Calcolo di qualcosa########
+  # Calcola la deviazione standard dei rendimenti logaritmici
+  data_log <- read.csv(rendimenti_log_path, header = TRUE)
+  head(data_log$rendimento.giornaliero.log)
+  variabilita <- sd(data_log$rendimento.giornaliero.log)
+  rendimento_medio <- mean(data_log$rendimento.giornaliero.log)
+  
+  # Stampa il risultato
+  print(variabilita)
+  print(rendimento_medio)
+  
+  #calcolo del rendimento privo di rischio per CUSIP 912796CQ0 con scadenza 14 settembre 2023
+  #l'idea è: ho file vari di nome securityprice_[dataDownload] li apro uno ad uno in ordine, prelevo il cusip associato e la data, e li salvo in un nuovo csv dove ho l'andamento di quel CUSIP.
+  
+  library(dplyr)
+  fedinvest_dir <-file.path(current_dir, "fedinvest")
+  maturity_date<- as.Date("2023-09-14")
+  
+  
+  preleva_e_aggiungi_csv <- function(direttorio, parte_fissa_nome, nuovo_csv) {
+    # Ottieni la lista dei nomi dei file CSV nel direttorio specificato
+    files <- sort(list.files(path = direttorio, pattern = parte_fissa_nome, full.names = TRUE))
+
+    # Inizializza un nuovo dataframe vuoto
+    nuovo_dataframe <- data.frame()
+    
+    # Loop attraverso i file CSV
+    for (file in files) {
+      
+      # Estrai la parte variabile (data) dal nome del file utilizzando substr
+      nome_file <- basename(file)
+      posizione_trattino <- max(gregexpr("_", nome_file)[[1]])
+      parte_variabile <- substr(nome_file, posizione_trattino + 1, nchar(nome_file) - 4)
+      
+      # Converti la parte variabile in un valore "data" e aggiorna la variabile data_variabile
+      data_variabile <- as.Date(parte_variabile)
+      #print(data_variabile)
+
+      # Leggi i dati dal file CSV
+      dati <- read.csv(file)
+      #print(file)
+      
+      # Seleziona la riga con il valore "912796CQ0" nel primo campo
+      riga_x <- dati %>% filter(dati[, 1] == "912796CQ0")
+      
+      # Se la riga con "x" è stata trovata, aggiungi il valore del primo campo e la data alla nuova dataframe
+      if (nrow(riga_x) > 0) {
+       # print(riga_x[,7])
+        r_no_risk_daily <- (100-riga_x[,7])/riga_x[,7] #rendimento giornaliero
+        time_to_maturity_days <-as.numeric(maturity_date-data_variabile)
+        r_no_risk_year <- (1+r_no_risk_daily)^(365.2425/time_to_maturity_days)-1
+        print(r_no_risk_year)
+        
+        nuovo_dataframe <- rbind(nuovo_dataframe, c(riga_x[, 7],as.character(data_variabile), r_no_risk_daily,r_no_risk_year)) #prendo la settima colonna, ovvero valore SELL (cusip). as character perchè sennò in csv non interpreta bene.
+      }
+    }
+    
+    # Assegna nomi alle colonne
+   colnames(nuovo_dataframe) <- c("Sell_value", "data_osservazione","r_norisk_daily","r_norisk_annual")
+    nuovo_csv <- file.path(fedinvest_dir,nuovo_csv)
+    
+    # Scrivi il nuovo dataframe nel nuovo file CSV
+    write.csv(nuovo_dataframe, nuovo_csv, row.names = FALSE)
+  }
+  
+  # Esempio di utilizzo della funzione
+  preleva_e_aggiungi_csv(direttorio = fedinvest_dir, parte_fissa_nome = "securityprice_", nuovo_csv = "cusipLife.csv")
+  
+  
