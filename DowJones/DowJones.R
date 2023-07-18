@@ -6,7 +6,7 @@
 start_date <- "2020-07-15"
 end_date <- "2023-07-15"
 
-# Formato le date nel formato richiesto dall'URL
+# Formatto le date nel formato richiesto dall'URL
 start_timestamp <- as.POSIXct(start_date)
 end_timestamp <- as.POSIXct(end_date)
 
@@ -19,9 +19,8 @@ url <- paste0("https://query1.finance.yahoo.com/v7/finance/download/%5EDJI?perio
 
 # Imposto la directory di lavoro sulla directory attuale (ovvero la cartella "dowjones")
 current_file <- normalizePath(rstudioapi::getSourceEditorContext()$path)
-print(current_file)
 current_dir <- dirname(current_file)
-print(current_dir)
+
 
 
 # Specifica il nome del file con la data corrente (salvo i dati in dowjones-<dataodierna>)
@@ -64,16 +63,10 @@ dow_data$Date <- as.Date(dow_data$Date)
 plot(dow_data$Date, dow_data$Close, type = "l", col = "blue", xlab = "Data", ylab = "Close Value",
      main = "Andamento dell'indice Dow Jones ^DJI")
 
-#lines(dow_data$Date, dow_data$High, col = "green", lty = "dashed")
-#lines(dow_data$Date, dow_data$Low, col = "red")
-
-# Aggiungi una legenda
-#legend("topleft", legend = c("Open", "High", "Low"), col = c("blue", "green", "red"), lty = c("solid", "dashed", "solid"))
 
 ###################### Rendimenti giornalieri (grafico + csv)#####################################################
 
 #RENDIMENTI GIORNALIERI
-
 # Leggi il file CSV, specificando che la prima riga contiene i nomi delle colonne e l'ultima riga non deve essere inclusa
 data <- read.csv(file_path, header = TRUE)
 head(data)
@@ -89,6 +82,7 @@ returns <- c(0, diff(data$Close) / lag(data$Close, default = data$Close[1]))
 
 # Aggiungi i rendimenti giornalieri come colonna al dataframe
 data$DailyReturn <- returns[1:nrow(data)]
+print(data$DailyReturn)
 
 # Crea un grafico dei rendimenti giornalieri
 plot(data$Date, data$DailyReturn, type = "l",col = "purple", xlab = "Data", ylab = "Rendimento giornaliero", main = "Rendimento giornaliero")
@@ -98,7 +92,6 @@ grid()
 
 # Aggiungi una legenda
 legend("bottom", legend = "Rendimento giornaliero", lty = 1, col = "purple")
-
 #SALVO QUESTI DATI IN UN CSV
 
 # Creazione del dataframe dei rendimenti giornalieri
@@ -118,6 +111,53 @@ datafolder <- "data"
 #specifico quindi il path completo del file, che parte dalla directory attuale, va in "data", e salva nel csv precedentemente dichiarato.
 rendimenti_path <- file.path(current_dir, datafolder, rendimenti) 
 write.csv(returns_data, rendimenti_path, row.names = TRUE)
+
+###################### Rendimenti giornalieri Logaritmici (grafico + csv)#####################################################
+
+#RENDIMENTI GIORNALIERI Logaritmici
+
+# Leggi il file CSV, specificando che la prima riga contiene i nomi delle colonne e l'ultima riga non deve essere inclusa
+data_log <- read.csv(file_path, header = TRUE)
+head(data_log)
+
+
+
+# Converti la colonna "Date" in formato data
+data_log$Date <- as.Date(data_log$Date)
+
+
+data_log$Log_Return <- c(0, log(data_log$Close[-1] / lag(data_log$Close[-nrow(data_log)])))
+
+# Crea un grafico dei rendimenti giornalieri
+plot(data_log$Date, data_log$Log_Return, type = "l",col = "green", xlab = "Data", ylab = "Rendimento giornaliero log", main = "Rendimento giornaliero log")
+
+# Aggiungi una griglia al grafico
+grid()
+
+
+
+# Aggiungi una legenda
+legend("bottom", legend = "Rendimento giornaliero log", lty = 1, col = "green")
+#SALVO QUESTI DATI IN UN CSV
+
+
+# Creazione del dataframe dei rendimenti giornalieri
+returns_data_log <- data.frame(data_log$Date, data_log$Log_Return)
+print(returns_data_log)
+# Rinomina le colonne del dataframe
+colnames(returns_data_log) <- c("data", "rendimento giornaliero log")
+
+# Salva il dataframe nel file "rendimenti.csv"
+
+# Specifica il nome del file con la data corrente (salvo i dati in dowjones-<dataodierna>)
+rendimenti_log <- paste("rendimentigiornalieriLOG_", format(Sys.Date(), "%d-%m-%Y"), ".csv", sep = "")
+
+# Specifica il percorso relativo alla sottocartella (questo csv lo salvo nella sottocartella "data")
+datafolder <- "data"
+
+#specifico quindi il path completo del file, che parte dalla directory attuale, va in "data", e salva nel csv precedentemente dichiarato.
+rendimenti_log_path <- file.path(current_dir, datafolder, rendimenti_log) 
+write.csv(returns_data_log, rendimenti_log_path, row.names = TRUE)
 
 ###################### PARTE 2: JDX INDEX OPTIONS #####################################################
 library(quantmod)
