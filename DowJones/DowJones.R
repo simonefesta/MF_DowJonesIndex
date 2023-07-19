@@ -234,12 +234,19 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
   #print(options_path)
   option_files <- sort(list.files(path = options_path, pattern = "DJX_Opt_", full.names = TRUE))
   # Inizializza un nuovo dataframe vuoto
-  df_options <- data.frame()
   index_day<-0
   #print(index_day)
   strike_values <- c()
   
+  # Ottenere la dimensione della lista "option_files"
+  dimensione_lista <- length(option_files)
+  
+  # Stampa la dimensione della lista "option_files"
+  #print(dimensione_lista)
+  
 
+ # new_data <- data.frame(matrix(NA, nrow = 0, ncol = dimensione_lista))
+  #new_data <-data.frame()
   
   # Loop attraverso i file CSV
   for (file in option_files) {
@@ -263,15 +270,8 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
     if (index_day == 0) {
       col_name <- "Strike"
       strike_values <<- c(strike_values, dati[[col_name]])
-      print(strike_values)
-      new_data <- data.frame(strike_values)
-      print(new_data)
-      strike_file <- file.path(current_dir,datafolder2, "StrikeStory.csv")
-      write_csv(new_data, strike_file)
-      
-      
-      
-      } else {
+      } 
+    
         call_last_pr_values <- c()
         col_name_2 <- "Call_LastPr"
       for (val in strike_values){  
@@ -282,27 +282,46 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
           # Se non ci sono righe corrispondenti, aggiungi un NA
           call_last_pr_values <- c(call_last_pr_values, NA)
         }
+        
 
       }
+        print(call_last_pr_values)
+        
+      if (index_day == 0){
+        new_data <- data.frame(call_last_pr_values)
+      } else{
+        
+        
+        #print(call_last_pr_values)
+        
         #new_data[index_day] <-call_last_pr_values 
         new_data <-cbind(new_data,call_last_pr_values)
-       # dati[["index_day"]] <- seq.int(from = index_day, length.out = nrow(df))
-        print(new_data)
-      #  print(index_day)
-        
-        #write_csv(new_data, strike_file,append = TRUE)
+       }
+  
+        index_day <- index_day + 1
         
         write_csv(new_data, strike_file)
+      }
         
     }
     
     
-    index_day <- index_day + 1
+   
     
-    
+  
+
+  
+  print(new_data)
+  # Creazione del grafico
+  plot(1, 1, type = "n", xlim = c(1, ncol(new_data)), ylim = c(min(new_data), max(new_data)), 
+       xlab = "Giorni dall'osservazione iniziale", ylab = "Andamento delle call a partire dallo strike")
+  
+  # Aggiunta delle linee per ogni riga del dataframe
+  for (i in 1:nrow(new_data)) {
+    lines(1:ncol(new_data), new_data[i,], col = i)
   }
   
-  
+
   
 
   

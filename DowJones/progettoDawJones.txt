@@ -25,7 +25,7 @@ Su https://treasurydirect.gov/GA-FI/FedInvest/selectSecurityPriceDate
 
 a partire da oggi vedo prezzi titoli NON RISCHIOSI, ce ne dovrà essere almeno uno con scadenza 14 settembre
 
-in particolare 912796CQ0 restituisce 100 dollari alla scadenza 9 14 23, oggi si compra a 99.099
+in particolare 912796CQ0 restituisce 100 dollari alla scadenza 9 14 23, oggi si compra a 99.099 (devo vedere SELL)
 
 ad oggi rendimento privo di rischio con quella scadenza è stimato a 100-99.09/0.99 etc
 rendimento privo di rischio nel periodo, va trasformato nel rendimento privo di rischio ANNUALE
