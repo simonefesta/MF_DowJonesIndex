@@ -220,9 +220,93 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
   file_path <- file.path(current_dir, datafolder2, paste0("DJX_Opt_", data_odierna,".csv"))
   print(file_path)
   write.csv(DJX_Opt_df, file_path)
+  
+  #requires install.packages("dplyr")
 
   
-########Calcolo di qualcosa########
+  
+  
+  #Plot delle opzioni
+  library(tidyverse)
+
+  #mi metto nella sottocartella "options"
+  options_path <- file.path(current_dir,datafolder2)
+  #print(options_path)
+  option_files <- sort(list.files(path = options_path, pattern = "DJX_Opt_", full.names = TRUE))
+  # Inizializza un nuovo dataframe vuoto
+  df_options <- data.frame()
+  index_day<-0
+  #print(index_day)
+  strike_values <- c()
+  
+
+  
+  # Loop attraverso i file CSV
+  for (file in option_files) {
+    
+    # Estrai la parte variabile (data) dal nome del file utilizzando substr
+    nome_file <- basename(file)
+    posizione_trattino <- max(gregexpr("_", nome_file)[[1]])
+    parte_variabile <- substr(nome_file, posizione_trattino + 1, nchar(nome_file) - 4)
+    
+    # Converti la parte variabile in un valore "data" e aggiorna la variabile data_variabile
+    data_variabile <- as.Date(parte_variabile)
+    #print(data_variabile)
+    
+    # Leggi i dati dal file CSV
+    dati <- read.csv(file)
+   # print(file)
+    
+    # Rimuovi le righe con Call_LastPr uguale a NA
+    dati <- dati %>% filter(!is.na(Call_LastPr))
+    
+    if (index_day == 0) {
+      col_name <- "Strike"
+      strike_values <<- c(strike_values, dati[[col_name]])
+      print(strike_values)
+      new_data <- data.frame(strike_values)
+      print(new_data)
+      strike_file <- file.path(current_dir,datafolder2, "StrikeStory.csv")
+      write_csv(new_data, strike_file)
+      
+      
+      
+      } else {
+        call_last_pr_values <- c()
+        col_name_2 <- "Call_LastPr"
+      for (val in strike_values){  
+        filtered_rows <- dati %>% filter(.data[[col_name]] == val)
+        if (nrow(filtered_rows) > 0) {
+          call_last_pr_values <- c(call_last_pr_values, filtered_rows[[col_name_2]])
+        } else {
+          # Se non ci sono righe corrispondenti, aggiungi un NA
+          call_last_pr_values <- c(call_last_pr_values, NA)
+        }
+
+      }
+        #new_data[index_day] <-call_last_pr_values 
+        new_data <-cbind(new_data,call_last_pr_values)
+       # dati[["index_day"]] <- seq.int(from = index_day, length.out = nrow(df))
+        print(new_data)
+      #  print(index_day)
+        
+        #write_csv(new_data, strike_file,append = TRUE)
+        
+        write_csv(new_data, strike_file)
+        
+    }
+    
+    
+    index_day <- index_day + 1
+    
+    
+  }
+  
+  
+  
+
+  
+########Calcolo di devianza, rendimento medio giornaliero, annuale, prendendolo dai csv del CUSIP########
   # Calcola la deviazione standard dei rendimenti logaritmici
   data_log <- read.csv(rendimenti_log_path, header = TRUE)
   head(data_log$rendimento.giornaliero.log)
@@ -290,4 +374,6 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
   # Esempio di utilizzo della funzione
   preleva_e_aggiungi_csv(direttorio = fedinvest_dir, parte_fissa_nome = "securityprice_", nuovo_csv = "cusipLife.csv")
   
+  
+########Calcolo tasso d'interesse non rischioso continuamente composto########
   
