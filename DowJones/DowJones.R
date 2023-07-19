@@ -61,7 +61,7 @@ dow_data$Date <- as.Date(dow_data$Date)
 
 # Crea un nuovo grafico con titolo
 plot(dow_data$Date, dow_data$Close, type = "l", col = "blue", xlab = "Data", ylab = "Close Value",
-     main = "Andamento dell'indice Dow Jones ^DJI")
+     main = "Andamento dell'indice Dow Jones ^DJX")
 
 
 ###################### Rendimenti giornalieri (grafico + csv)#####################################################
@@ -126,7 +126,7 @@ head(data_log)
 data_log$Date <- as.Date(data_log$Date)
 
 
-data_log$Log_Return <- c(0, log(data_log$Close[-1] / lag(data_log$Close[-nrow(data_log)])))
+data_log$Log_Return <-  c(0, diff(log(data_log$Close)))
 
 # Crea un grafico dei rendimenti giornalieri
 plot(data_log$Date, data_log$Log_Return, type = "l",col = "green", xlab = "Data", ylab = "Rendimento giornaliero log", main = "Rendimento giornaliero log")
@@ -239,7 +239,8 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
   strike_values <- c()
   
   # Ottenere la dimensione della lista "option_files"
-  dimensione_lista <- length(option_files)
+  #dimensione_lista <- length(option_files)
+  strike_file <- file.path(current_dir,datafolder2, "StrikeStory.csv")
   
   # Stampa la dimensione della lista "option_files"
   #print(dimensione_lista)
@@ -285,7 +286,7 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
         
 
       }
-        print(call_last_pr_values)
+        #print(call_last_pr_values)
         
       if (index_day == 0){
         new_data <- data.frame(call_last_pr_values)
@@ -303,22 +304,14 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
         write_csv(new_data, strike_file)
       }
         
-    }
     
-    
-   
-    
-  
-
-  
-  print(new_data)
   # Creazione del grafico
-  plot(1, 1, type = "n", xlim = c(1, ncol(new_data)), ylim = c(min(new_data), max(new_data)), 
+  plot(1, 1, type = "n", xlim = c(1,ncol(new_data)-1), ylim = c(min(new_data), max(new_data)), 
        xlab = "Giorni dall'osservazione iniziale", ylab = "Andamento delle call a partire dallo strike")
   
   # Aggiunta delle linee per ogni riga del dataframe
   for (i in 1:nrow(new_data)) {
-    lines(1:ncol(new_data), new_data[i,], col = i)
+    lines(0:(ncol(new_data)-1), new_data[i,], col = i)
   }
   
 
@@ -326,9 +319,13 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
 
   
 ########Calcolo di devianza, rendimento medio giornaliero, annuale, prendendolo dai csv del CUSIP########
+  #NOTA: manualmente recarsi su https://treasurydirect.gov/GA-FI/FedInvest/selectSecurityPriceDate, scaricare il csv,
+  # metterlo nella cartella "fedinvest", e aggiungere la data al nome nello stesso formato dei file presenti.
+  
   # Calcola la deviazione standard dei rendimenti logaritmici
+  print(rendimenti_log_path)
   data_log <- read.csv(rendimenti_log_path, header = TRUE)
-  head(data_log$rendimento.giornaliero.log)
+  head(data_log$rendimento.giornaliero.log) #se faccio anteprima di data_log, vediamo come rendimento.giornaliero.log è il nome della colonna).
   variabilita <- sd(data_log$rendimento.giornaliero.log)
   rendimento_medio <- mean(data_log$rendimento.giornaliero.log)
   
@@ -377,13 +374,14 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
         time_to_maturity_days <-as.numeric(maturity_date-data_variabile)
         r_no_risk_year <- (1+r_no_risk_daily)^(365.2425/time_to_maturity_days)-1
         print(r_no_risk_year)
-        
-        nuovo_dataframe <- rbind(nuovo_dataframe, c(riga_x[, 7],as.character(data_variabile), r_no_risk_daily,r_no_risk_year)) #prendo la settima colonna, ovvero valore SELL (cusip). as character perchè sennò in csv non interpreta bene.
+        r_composite <- log(1+r_no_risk_year)/time_to_maturity_days
+        print(r_composite)
+        nuovo_dataframe <- rbind(nuovo_dataframe, c(riga_x[, 7],as.character(data_variabile), r_no_risk_daily,r_no_risk_year, r_composite)) #prendo la settima colonna, ovvero valore SELL (cusip). as character perchè sennò in csv non interpreta bene.
       }
     }
     
     # Assegna nomi alle colonne
-   colnames(nuovo_dataframe) <- c("Sell_value", "data_osservazione","r_norisk_daily","r_norisk_annual")
+   colnames(nuovo_dataframe) <- c("Sell_value", "data_osservazione","r_norisk_daily","r_norisk_annual","r_composite")
     nuovo_csv <- file.path(fedinvest_dir,nuovo_csv)
     
     # Scrivi il nuovo dataframe nel nuovo file CSV
