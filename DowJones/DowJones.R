@@ -168,7 +168,6 @@ data_odierna <- format(Sys.Date(), "%Y-%m-%d")
 # Crea il nome della variabile con la data odierna
 DJX_Opt <- paste0("DJX_Opt_", data_odierna)
 
-start_value <- 338.77 #valore iniziale dell'osservazione, data 14/07/23 (ok anche per il 15/07, mercati chiusi)
 
 DJX_Opt <- getOptionChain("^DJX", Exp="2023-09-15", src='yahoo')
 class(DJX_Opt)
@@ -322,7 +321,7 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
   #NOTA: manualmente recarsi su https://treasurydirect.gov/GA-FI/FedInvest/selectSecurityPriceDate, scaricare il csv,
   # metterlo nella cartella "fedinvest", e aggiungere la data al nome nello stesso formato dei file presenti.
   
-  # Calcola la deviazione standard dei rendimenti logaritmici
+  # Calcola la deviazione standard dei rendimenti logaritmici dell'ultimo report dei rendimenti giornalieri LOG
   print(rendimenti_log_path)
   data_log <- read.csv(rendimenti_log_path, header = TRUE)
   head(data_log$rendimento.giornaliero.log) #se faccio anteprima di data_log, vediamo come rendimento.giornaliero.log è il nome della colonna).
@@ -340,13 +339,13 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
   fedinvest_dir <-file.path(current_dir, "fedinvest")
   maturity_date<- as.Date("2023-09-14")
   
+  # Inizializza un nuovo dataframe vuoto
+  nuovo_dataframe <- data.frame()
   
-  preleva_e_aggiungi_csv <- function(direttorio, parte_fissa_nome, nuovo_csv) {
-    # Ottieni la lista dei nomi dei file CSV nel direttorio specificato
-    files <- sort(list.files(path = direttorio, pattern = parte_fissa_nome, full.names = TRUE))
+  preleva_e_aggiungi_csv <- function(folder, parte_fissa_nome, nuovo_csv) {
+    # Ottieni la lista dei nomi dei file CSV nella folder specificato
+    files <- sort(list.files(path = folder, pattern = parte_fissa_nome, full.names = TRUE))
 
-    # Inizializza un nuovo dataframe vuoto
-    nuovo_dataframe <- data.frame()
     
     # Loop attraverso i file CSV
     for (file in files) {
@@ -374,23 +373,174 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
         time_to_maturity_days <-as.numeric(maturity_date-data_variabile)
         r_no_risk_year <- (1+r_no_risk_daily)^(365.2425/time_to_maturity_days)-1
         print(r_no_risk_year)
-        r_composite <- log(1+r_no_risk_year)/time_to_maturity_days
-        print(r_composite)
-        nuovo_dataframe <- rbind(nuovo_dataframe, c(riga_x[, 7],as.character(data_variabile), r_no_risk_daily,r_no_risk_year, r_composite)) #prendo la settima colonna, ovvero valore SELL (cusip). as character perchè sennò in csv non interpreta bene.
+        r_composite <- log(1+r_no_risk_year)/time_to_maturity_days #forse devo dividere per 1, non per maturity days
+        print(r_composite) #Nota: in rbind uso "<<-" e non "<-" per salvare tali dati nel dataframe globalmente
+        nuovo_dataframe <<- rbind(nuovo_dataframe, c(riga_x[, 7],as.character(data_variabile), r_no_risk_daily,r_no_risk_year, r_composite)) #prendo la settima colonna, ovvero valore SELL (cusip). as character perchè sennò in csv non interpreta bene.
+        colnames(nuovo_dataframe) <<-c("Sell_value","data_osservazione","r_norisk_daily","r_norisk_annual","r_composite")
+        
       }
     }
     
     # Assegna nomi alle colonne
    colnames(nuovo_dataframe) <- c("Sell_value", "data_osservazione","r_norisk_daily","r_norisk_annual","r_composite")
     nuovo_csv <- file.path(fedinvest_dir,nuovo_csv)
+    print(nuovo_dataframe)
     
     # Scrivi il nuovo dataframe nel nuovo file CSV
     write.csv(nuovo_dataframe, nuovo_csv, row.names = FALSE)
   }
   
   # Esempio di utilizzo della funzione
-  preleva_e_aggiungi_csv(direttorio = fedinvest_dir, parte_fissa_nome = "securityprice_", nuovo_csv = "cusipLife.csv")
+  preleva_e_aggiungi_csv(folder = fedinvest_dir, parte_fissa_nome = "securityprice_", nuovo_csv = "cusipLife.csv")
+  
+  ####### Calibrazione ########
+  print(nuovo_dataframe)
+  print(class(nuovo_dataframe$r_composite))
+  
+  # Calcola la media dei valori nella colonna "r_composite" di nuovo_dataframe
+  nuovo_dataframe$r_composite <- as.numeric(nuovo_dataframe$r_composite)
+  r_norisk_composite <- mean(nuovo_dataframe$r_composite, na.rm = TRUE)
+  print(r_norisk_composite)
+  
+
+  ###test####
+  
+  library(fOptions)
+  library(igraph)
+  # Funzione per calcolare i valori moltiplicati per u e d
+  calculate_next_values <- function(value) {
+    c(value * u, value * d)
+  }
+  
+  for (i in 1:num_tempi) { #OK
+    if (i==1){
+      next_values <- calculate_next_values(start_value)
+      print(next_values)
+      
+    } else{
+      next_values <- calculate_next_values(next_values)
+      print(next_values)
+      
+    }
+  
+    }
+    
+  # Inizializza una lista per memorizzare i valori ad ogni iterazione
+  values_list <- vector("list", num_tempi + 1)
+  values_list[[1]] <- start_value
+  
+  # Ciclo per calcolare i valori ad ogni iterazione
+  for (i in 1:num_tempi) {
+    values_list[[i+1]] <- calculate_next_values(values_list[[i]])
+    print(values_list[i+1])
+  }
+  
+  # Stampa i valori per ogni iterazione
+  for (i in 0:num_tempi) {
+    print(paste("Iterazione", i, ": ", values_list[[i+1]]))
+  }
+
+  ######ADRI MODE######
+  library(timeDate)
+  library(timeSeries)
+  library(fBasics)
+  library(fOptions)
+  library(tibble)
+  library("data.table")
+  library(dplyr)
+  library(reshape2)
+  library(tidyverse)
+  library(ggplot2)
+  library(gridExtra)
+  library(cowplot)
+  library(urca)
+  library(moments)
+  library(lmtest)
+  
+  # Model Setting ----------------------------------------------------------------
+  r <- r_norisk_composite
+  u <- exp(variabilita*sqrt(deltaT))
+  d <- exp(-variabilita*sqrt(deltaT))
+  p <- (1 + r_norisk_composite - d)/(u-d)
+  q <- (u - (1+r_norisk_composite))/(u-d) 
+  S_0 <-  338.77
+  K <- 0
+  N <- 5
   
   
-########Calcolo tasso d'interesse non rischioso continuamente composto########
+  # Lattice (intro plot) ------------------------------------------------------------
+  S <- matrix(NA, nrow=N+1, ncol = N+1)
+  S[1,1] <- S_0
+  show(S)
+  
+  # First Procedure
+  for(n in 1:N){
+    for(k in 0:n){S[k+1,n+1] <- S_0*u^(n-k)*d^k}
+  }
+  show(S)
+  
+  BinomialTreePlot(S)
+  
+  # Second Procedure
+  S <- matrix(NA, nrow=N+1, ncol = N+1)
+  S[1,1] <- S_0
+  for(n in 1:N){
+    for(k in 0:n){S[n+1,k+1] <- round(S_0*u^k*d^(n-k),3)}
+  }
+  show(S)
+  S_df <- as.data.frame(S)
+
+  S_tb <- setDT(S_df)   
+  class(S_tb)
+  head(S_tb)
+  
+  # library(reshape2)
+  S_rsh_df <- melt(S_tb, na.rm=FALSE)
+  show(S_rsh_df[1:20,])
+  
+  # We add an Index identifying variable to the data frame S_rsh_df
+  # library(tidyverse)
+  # library(dplyr)
+  S_mod_rsh_df <- subset(S_rsh_df, select = -variable)
+  S_mod_rsh_df <- rename(S_mod_rsh_df, S_value = value)
+  head(S_mod_rsh_df,15)
+  S_mod_rsh_df <- add_column(S_mod_rsh_df, Index=rep(0:(nrow(S_df)-1), times=ncol(S_df)), .before="S_value")
+  head(S_mod_rsh_df,15)
+  # We are finally in a position to draw a draft plot of the price lattice
+  # library(ggplot2)
+  
+  Data_df <- S_mod_rsh_df
+  title_content <- bquote(atop("University of Roma \"Tor Vergata\" - Corso di Metodi Probabilistici e Statistici per i Mercati Finanziari", 
+                               "Example of Lattice Plot for DJX Index in CRR Model"))
+  subtitle_content <- bquote(paste("market periods N = ", .(N), ", risk free rate r = ", .(r), ", up factor u = ",.(u), ", down factor d = ",.(d), ", risk neutral probability distribution (p,q) = (",.(p),",",.(q),")."))
+  caption_content <- "Author: Simone Festa"
+  y_breaks_num <- 4
+  y_margin <- 5
+  y_breaks_low <- floor(min(Data_df$S_value, na.rm =TRUE))-y_margin
+  y_breaks_up <- ceiling(max(Data_df$S_value, na.rm =TRUE))+y_margin
+  y_breaks <- seq(from=y_breaks_low, to=y_breaks_up, length.out=y_breaks_num)
+  y_labs <- format(y_breaks, scientific=FALSE)
+  K <- 0
+  y_lims <- c((y_breaks_low-K*y_margin), (y_breaks_up+K*y_margin))
+  y_name <- bquote("stock values")
+  y1_txt <- bquote("stock values")
+  y2_txt <- bquote("put current payoffs")
+  leg_labs <- c(y1_txt)
+  leg_vals <- c("y1_txt"="black")
+  leg_sort <- c("y1_txt")
+  S_lattice_sp <- ggplot(Data_df, aes(Index, S_value)) + 
+    geom_point(na.rm = TRUE, colour="black") +
+    geom_text(aes(label=round(S_value,3), colour="y1_txt"), hjust=1.0, vjust=-0.7, na.rm = TRUE) + 
+    ggtitle(title_content) +
+    labs(subtitle=subtitle_content, caption=caption_content) +
+    xlab("time") + 
+    scale_y_continuous(name=y_name, breaks=y_breaks, labels=NULL, limits=y_lims,
+                       sec.axis = sec_axis(~., breaks=y_breaks, labels=y_labs)) +
+    scale_colour_manual(name="Legend", labels=leg_labs, values=leg_vals, breaks=leg_sort) +
+    theme(plot.title=element_text(hjust=0.5), plot.subtitle=element_text(hjust=0.5),
+          axis.text.x = element_text(angle=0, vjust=1),
+          legend.key.width = unit(0.80,"cm"), legend.position="bottom")
+  plot(S_lattice_sp)
+  
+
   
