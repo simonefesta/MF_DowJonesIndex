@@ -1,12 +1,11 @@
 # MF_DowJonesIndex
 
 Progetto per il corso di Mercati Finanziari, analisi del Dow Jones Index.
+Linguaggio utilizzato: R
 
-###### Linguaggio utilizzato: R
+## Svolgimento analisi
 
-## Svolgimento dell'analisi
-
-#### Indici di riferimento
+### Indice di riferimento
 
 Si è studiato l'indice Dow Jones, prelevando i dati da Yahoo Finance.
 Tale sito mantiene *due versioni* di questo indice:
@@ -19,7 +18,7 @@ Tale sito mantiene *due versioni* di questo indice:
 Il primo (*DJI*) permette di visionare i *dati storici* ma NON le *opzioni*.
 Il secondo (*DJX*) permette di visionare le *opzioni* ma NON i *storici*.
 
-#### Prelievo dei dati
+### Prelievo dei dati
 
 - Dall'indice DJI sono stati prelevati i dati storici dal *15/07/2020* al *15/07/2023*.
   In particolare, è stato realizzato un plot contenente *<data, close_value>*
@@ -27,15 +26,14 @@ Il secondo (*DJX*) permette di visionare le *opzioni* ma NON i *storici*.
   
 - Dall'indice DJX sono state prelevate giornalmente le opzioni, sia in versione *call* sia in versione *put*. Di tale indice è stato prelevato anche il *valore iniziale del titolo*, dato di partenza per la generazione del *Lattice plot* finale.
   
+### Generazione di dati utili
 
-#### Generazione di dati utili
 
 - Con i dati storici del DJI è stato prodotto, giorno per giorno, un *tasso di rendimento logaritmico*, espresso come $ln(\frac{S_{n}}{S_{n-1}})$. Questi dati sono stati renderizzati su un grafico, oltre che salvati in file.csv
   
 - Con le opzioni del DJX è stato tracciato, in funzione ad ogni *strike* trovato, l'andamento nel tempo del *lastCallPrice*, ovvero l'evoluzione dell'ultimo prezzo di Call.
   
-
-#### Calcolo di variabilità e rendimenti
+### Calcolo di variabilità e rendimenti
 
 Partendo dai rendimenti logaritmici ottenuti, sono stati calcolate la *media campionaria* e *variabilità campionaria*, mediante funzioni apposite fornite da R.
 
@@ -45,21 +43,21 @@ In particolare, viene analizzato il
 
 - *rendimento giornaliero* = $\frac{100-sellValue}{sellValue}$
   
-- *rendimento annuale* = $(1+ \;rendimentoGiornaliero)^\frac{365.2425}{giorni \;maturità}$
+- *rendimento annuale* = $(1+ rendimentoGiornaliero)^\frac{365.2425}{giorni_maturità}$
   
-- *rendimento continuamente composto* = $\frac{ln(1+rendimentoAnnuale)}{giorni \;maturità}$
+- *rendimento continuamente composto* = $\frac{ln(1+rendimentoAnnuale)}{giorni_maturità}$
   
 
 NB: *giorni maturità* è dato dalla differenza tra il *14/09/2023* e la data in cui è stato prodotto/scaricato il file di FedInvest.
 
-#### Calibrazione del modello
+### Calibrazione del modello
 
 Per la calibrazione, si utilizza la media del *rendimento continuamente composto*, ovvero la somma dei valori ottenuti giorno dopo giorno diviso il numero di giorni in cui è stato calcolato. 
 Per completare la calibrazione, partendo dal *rendimento continuamente composto*, che chiameremo *r*, troviamo:
 
-- $u = exp(\sigma*\Delta t)$
+- $u = exp(\sigma \cdot \Delta t)$
   
-- $d = exp(- \sigma*\Delta t)$
+- $d = exp(- \sigma \cdot \Delta t)$
   
 - $\tilde{p} = \frac{1 + r - d}{u - d}$
   
@@ -70,6 +68,6 @@ Per completare la calibrazione, partendo dal *rendimento continuamente composto*
 
 NB:
 
-- $\sigma \doteq $ variabilità calcolata precedentemente
+- $\sigma \doteq$ variabilità calcolata precedentemente
   
 - $\Delta t \doteq$ dimensione intervallo di osservazione.
