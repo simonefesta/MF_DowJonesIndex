@@ -327,14 +327,14 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
         
         print(r_composite) #Nota: in rbind uso "<<-" e non "<-" per salvare tali dati nel dataframe globalmente
         
-        rendimenti_df <<- rbind(rendimenti_df, c(riga_x[, 7],as.character(data_variabile), r_no_risk_daily,r_no_risk_year, r_composite)) #prendo la settima colonna, ovvero valore SELL (cusip). as character perchè sennò in csv non viene riconosciuto.
+        rendimenti_df <<- rbind(rendimenti_df, c(riga_x[, 7],as.character(data_variabile),time_to_maturity_days, r_no_risk_daily,r_no_risk_year, r_composite)) #prendo la settima colonna, ovvero valore SELL (cusip). as character perchè sennò in csv non viene riconosciuto.
         
 
       }
     }
     
     # Assegna nomi alle colonne
-    colnames(rendimenti_df) <<- c("Sell_value", "data_osservazione","r_norisk_daily","r_norisk_annual","r_composite")
+    colnames(rendimenti_df) <<- c("Sell_value", "data_osservazione","days_to_maturity","r_norisk_daily","r_norisk_annual","r_composite")
     rendimenti_csv_file_output <- file.path(fedinvest_dir,rendimenti_csv_file_output)
     print(rendimenti_df)
     
@@ -347,15 +347,11 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
   
 ###### Calibrazione & Lattice Plot ########
 
-   # colnames(rendimenti_df) <- c("Sell_value", "data_osservazione","r_norisk_daily","r_norisk_annual","r_composite")
   
-  print(rendimenti_df)
-  #print(class(rendimenti_df$r_composite))
-  
-  # Calcola la media dei valori nella colonna "r_composite" e lo metto in una variabile associata
+  # converto il rendimento continuamente composto e i giorni alla maturità in valori numerici (nel csv sono salvati come char)
   rendimenti_df$r_composite <- as.numeric(rendimenti_df$r_composite)
-  r_norisk_composite <- mean(rendimenti_df$r_composite, na.rm = TRUE)
-  print(r_norisk_composite)
+  rendimenti_df$days_to_maturity <- as.numeric(rendimenti_df$days_to_maturity)
+  
   
 
 
@@ -363,12 +359,12 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
   # Model Setting ----------------------------------------------------------------
   
 
-  deltaT <- 56
+  deltaT <- as.numeric(maturity_date-data_variabile) #tempo alla maturità, a partire dall'ultima osservazione disponibile.
   r <- mean(rendimenti_df$r_composite)
   u <- exp(variabilita*sqrt(deltaT))
   d <- exp(-variabilita*sqrt(deltaT))
-  p <- (1 + r_norisk_composite - d)/(u-d)
-  q <- (u - (1+r_norisk_composite))/(u-d) 
+  p <- (1 + r - d)/(u-d)
+  q <- (u - (1+r))/(u-d) 
   S_0 <-  338.77
   K <- 0
   N <- 5
