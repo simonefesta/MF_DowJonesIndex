@@ -361,8 +361,10 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
 
   
   # Model Setting ----------------------------------------------------------------
-  deltaT <- 1
-  r <- r_norisk_composite
+  
+
+  deltaT <- 56
+  r <- mean(rendimenti_df$r_composite)
   u <- exp(variabilita*sqrt(deltaT))
   d <- exp(-variabilita*sqrt(deltaT))
   p <- (1 + r_norisk_composite - d)/(u-d)
