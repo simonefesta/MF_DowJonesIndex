@@ -186,6 +186,7 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
   # index day è associato al "giorno" dell'osservazione, strike_values conterrà gli strike che osserverò
   index_day<-0
   strike_values <- c()
+
   
   
   strike_file <- file.path(current_dir,optionsfolder, "StrikeStory.csv") #qui scriverò la "storia" dei vari strike
@@ -242,17 +243,57 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
         write_csv(strike_frame, strike_file)
       }
         
-    
-  # Creazione del grafico
-  plot(1, 1, type = "n", xlim = c(1,ncol(strike_frame)-1), ylim = c(min(strike_frame), max(strike_frame)), 
+   print(strike_frame) 
+   
+   varianze <- apply(strike_frame, 1, var)
+   clean_strike_frame <- subset(strike_frame, varianze != 0)
+   print(clean_strike_frame)
+   
+   
+  # Grafico di tutti gli strike in funzione di lastCallPrice di un dataset ########
+   
+   
+  plot(1, 1, type = "n", xlim = c(0,ncol(strike_frame)), ylim = c(min(strike_frame), max(strike_frame)), 
        xlab = "Giorni dall'osservazione iniziale", ylab = "LastCallPrice", 
-       main = "Evoluzione del lastCallPrice in funzione degli strike")
+       main = "Evoluzione del lastCallPrice in funzione di tutti gli strike")
   
+
   # Aggiunta delle linee per ogni riga del dataframe
   for (i in 1:nrow(strike_frame)) {
     lines(0:(ncol(strike_frame)-1), strike_frame[i,], col = i)
   }
+   
+   legend("topright", legend = strike_values, col = 1:length(strike_values), lty = 1, pch = 10, title = "Strikes associated",xpd = TRUE)
+   
+
   
+  
+  # Grafico degli strike in funzione di lastCallPrice di un dataset (only traded)#######
+  
+  # Questa serie di comandi mi permettono di avere sul grafico gli Strike di riferimento che osservo.
+   
+  strike_clean_read <- read.csv(file)
+  strike_clean_total <- strike_clean_read$Strike
+  # Trova il numero totale di colonne nel dataframe "clean_strike_frame"
+  num_colonne <- ncol(clean_strike_frame)
+  # Estrai la colonna "LastPr" dal dataframe "clean_strike_frame" (considerando l'ultima colonna)
+  ultima_colonna <- clean_strike_frame[, num_colonne]
+  # Filtra le colonne "Strike" in base alla presenza dell'elemento "LastPr" nel vettore "clean_strike_frame_strikes"
+  strike_legend <- strike_clean_total[strike_clean_read$Call_LastPr %in% clean_strike_frame[, num_colonne]]
+  
+
+    plot(1, 1, type = "n", xlim = c(0,ncol(clean_strike_frame)), ylim = c(min(clean_strike_frame), max(clean_strike_frame)), 
+       xlab = "Giorni dall'osservazione iniziale", ylab = "LastCallPrice", 
+       main = "Evoluzione del lastCallPrice in funzione dei soli strike variati")
+  
+    
+      # Aggiunta delle linee per ogni riga del dataframe
+  for (i in 1:nrow(clean_strike_frame)) {
+    lines(0:(ncol(clean_strike_frame)-1), clean_strike_frame[i,], col = i)
+  }
+   
+   legend("topright", legend = strike_legend, col = 1:length(strike_legend), lty = 1, pch = 10, title = "Strikes associated")
+   
 
   
 
@@ -345,7 +386,7 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
   # Richiamo della funzione
   rendimenti_famiglia_csv(folder = fedinvest_dir, parte_fissa_nome = "securityprice_", rendimenti_csv_file = "cusipLife.csv")
   
-###### Calibrazione & Lattice Plot ########
+###### Calibrazione & Lattice Plot ( ########
 
   
   # converto il rendimento continuamente composto e i giorni alla maturità in valori numerici (nel csv sono salvati come char)
@@ -366,11 +407,11 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
   p <- (1 + r - d)/(u-d)
   q <- (u - (1+r))/(u-d) 
   S_0 <-  338.77
-  K <- 0
+  K <- 340
   N <- 5
   
   
-  # Lattice (intro plot) ------------------------------------------------------------
+  # stock values (K not used, è stata impostata a 0) ------------------------------------------------------------
   S <- matrix(NA, nrow=N+1, ncol = N+1)
   S[1,1] <- S_0
   show(S)
@@ -426,7 +467,7 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
   y_lims <- c((y_breaks_low-K*y_margin), (y_breaks_up+K*y_margin))
   y_name <- bquote("stock values")
   y1_txt <- bquote("stock values")
-  y2_txt <- bquote("put current payoffs")
+  y2_txt <- bquote("call current payoffs")
   leg_labs <- c(y1_txt)
   leg_vals <- c("y1_txt"="black")
   leg_sort <- c("y1_txt")
@@ -446,3 +487,176 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
   
 
   
+  # Stock values, call current payoffs######
+  
+  # Still assume K=S_0=100 and consider an American call option we have
+  K <- 340
+  ACP <- matrix(NA, nrow=N+1, ncol = N+1)
+  ACP[1,1] <- 0
+  for(n in 1:N){
+    for(k in 0:N){ACP[n+1,k+1] <- round(max(S[n+1,k+1]-K,0),3)}
+  }
+  show(ACP)
+  
+  ACP_df <- as.data.frame(ACP)
+  # library("data.table")
+  ACP_tb <- setDT(ACP_df)   
+  class(ACP_tb)
+  head(ACP_tb)
+  # library(reshape2)
+  ACP_rsh_df <- melt(ACP_tb, na.rm=FALSE)
+  show(ACP_rsh_df[1:20,])
+  ACP_mod_rsh_df <- subset(ACP_rsh_df, select = -variable)
+  ACP_mod_rsh_df <- rename(ACP_mod_rsh_df, ACP_value=value)
+  show(ACP_mod_rsh_df[1:20,])
+  ACP_mod_rsh_df <- add_column(ACP_mod_rsh_df, Index=rep(0:(nrow(S_df)-1), times=ncol(ACP_df)), .before="ACP_value")
+  show(ACP_mod_rsh_df[1:20,])
+  ACP_mod_rsh_df <- add_column(ACP_mod_rsh_df, S_value=S_mod_rsh_df$S_value, .before="ACP_value")
+  show(ACP_mod_rsh_df[1:20,])
+  
+  Data_df <- ACP_mod_rsh_df
+  length <- N
+  title_content <- bquote(atop("University of Roma \"Tor Vergata\" - Corso di Metodi Probabilistici e Statistici per i Mercati Finanziari", 
+                               "Example of Lattice Plot for American Call Option - Current Payoffs in CRR Model"))
+  subtitle_content <- bquote(paste("market periods N = ", .(N), ", risk free rate r = ", .(r), ", up factor u = ",.(u), ", down factor d = ",.(d), ", risk neutral probability distribution (p,q) = (",.(p),",",.(q),"), exercise price K = ",.(K),"."))
+  caption_content <- "Author: Simone Festa, mat 032040"
+  y_breaks_num <- 4
+  y_margin <- 5
+  y_breaks_low <- floor(min(Data_df$S_value, na.rm =TRUE))-y_margin
+  y_breaks_up <- ceiling(max(Data_df$S_value, na.rm =TRUE))+y_margin
+  y_breaks <- seq(from=y_breaks_low, to=y_breaks_up, length.out=y_breaks_num)
+  y_labs <- format(y_breaks, scientific=FALSE)
+  #K <- 0
+  y_lims <- c((y_breaks_low-K*y_margin), (y_breaks_up+K*y_margin))
+  y_name <- bquote("stock values")
+  y1_txt <- bquote("stock values")
+  y2_txt <- bquote("call current payoffs")
+  leg_labs <- c(y1_txt, y2_txt)
+  leg_vals <- c("y1_txt"="black", "y2_txt"="red")
+  leg_sort <- c("y1_txt", "y2_txt")
+  S_ACP_lattice_sp <- ggplot(Data_df, aes(Index, S_value, group=factor(Index))) + 
+    geom_point(na.rm = TRUE, colour="black") +
+    geom_text(aes(label=round(S_value,3), colour="y1_txt"), hjust=1.0, vjust=-0.7, na.rm = TRUE) + 
+    geom_text(aes(label=round(ACP_value,3), colour="y2_txt"), hjust=1.0, vjust=1.3, na.rm = TRUE) + 
+    ggtitle(title_content) +
+    labs(subtitle=subtitle_content, caption=caption_content) +
+    xlab("time") + 
+    scale_y_continuous(name=y_name, breaks=y_breaks, labels=NULL, limits=y_lims,
+                       sec.axis = sec_axis(~., breaks=y_breaks, labels=y_labs)) +
+    scale_colour_manual(name="Legend", labels=leg_labs, values=leg_vals, breaks=leg_sort) +
+    theme(plot.title=element_text(hjust=0.5), plot.subtitle=element_text(hjust=0.5),
+          axis.text.x = element_text(angle=0, vjust=1),
+          legend.key.width = unit(0.80,"cm"), legend.position="bottom")
+  plot(S_ACP_lattice_sp)
+  #
+  # Stock values, call current payoffs, call expected payoffs####
+  AC_EP <- matrix(NA, nrow=N+1, ncol = N+1)
+  AC_EP[N+1,] <- ACP[N+1,]
+  for(n in N:1){
+    for(k in 0:n){AC_EP[n,k] <- round((1/(1+r))*(q*AC_EP[n+1,k]+p*AC_EP[n+1,k+1]),3)}
+  }
+  show(AC_EP)
+  
+  AC_EP_df <- as.data.frame(AC_EP)
+  # library("data.table")
+  AC_EP_tb <- setDT(AC_EP_df)   
+  class(AC_EP_tb)
+  head(AC_EP_tb)
+  # library(reshape2)
+  AC_EP_rsh_df <- melt(AC_EP_tb, na.rm=FALSE)
+  show(AC_EP_rsh_df[1:20,])
+  AC_EP_mod_rsh_df <- subset(AC_EP_rsh_df, select = -variable)
+  AC_EP_mod_rsh_df <- rename(AC_EP_mod_rsh_df, AC_EP_value=value)
+  AC_EP_mod_rsh_df <- add_column(AC_EP_mod_rsh_df, Index=rep(0:(nrow(AC_EP_df)-1), times=ncol(AC_EP_df)), .before="AC_EP_value")
+  show(AC_EP_mod_rsh_df[1:20,])
+  
+  ACP_mod_rsh_df <- add_column(ACP_mod_rsh_df, AC_EP_value=AC_EP_mod_rsh_df$AC_EP_value, .after="ACP_value")
+  show(ACP_mod_rsh_df[1:20,])
+  
+  # library(ggplot2)
+  Data_df <- ACP_mod_rsh_df
+  length <- N
+  title_content <- bquote(atop("University of Roma \"Tor Vergata\" - Corso di Metodi Probabilistici e Statistici per i Mercati Finanziari", 
+                               "Example of Lattice Plot for American Call Option - Current Payoffs and Expected Payoffs in CRR Model"))
+  subtitle_content <- bquote(paste("market periods N = ", .(N), ", risk free rate r = ", .(r), ", up factor u = ",.(u), ", down factor d = ",.(d), ", risk neutral probability distribution (p,q) = (",.(p),",",.(q),"), exercise price K = ",.(K),"."))
+  caption_content <- "Author: Simone Festa, mat. 0320408"
+  y_breaks_num <- 4
+  y_margin <- 5
+  y_breaks_low <- floor(min(Data_df$S_value, na.rm =TRUE))-y_margin
+  y_breaks_up <- ceiling(max(Data_df$S_value, na.rm =TRUE))+y_margin
+  y_breaks <- seq(from=y_breaks_low, to=y_breaks_up, length.out=y_breaks_num)
+  y_labs <- format(y_breaks, scientific=FALSE)
+  K <- 0
+  y_lims <- c((y_breaks_low-K*y_margin), (y_breaks_up+K*y_margin))
+  y_name <- bquote("stock values")
+  y1_txt <- bquote("stock values")
+  y2_txt <- bquote("call current payoffs")
+  y3_txt <- bquote("call expected payoffs")
+  leg_labs <- c(y1_txt, y2_txt, y3_txt)
+  leg_vals <- c("y1_txt"="black", "y2_txt"="red", "y3_txt"="blue")
+  leg_sort <- c("y1_txt", "y2_txt", "y3_txt")
+  S_ACP_AC_EP_lattice_sp <- ggplot(Data_df, aes(Index, S_value)) + 
+    geom_point(na.rm = TRUE, colour="black") +
+    geom_text(aes(label=round(S_value,3), colour="y1_txt"), hjust=1.0, vjust=-0.7, na.rm = TRUE) + 
+    geom_text(aes(label=round(ACP_value,3), colour="y2_txt"), hjust=1.0, vjust=1.3, na.rm = TRUE) + 
+    geom_text(aes(label=round(AC_EP_value,3), colour="y3_txt"), hjust=-0.2, vjust=1.3, na.rm = TRUE) + 
+    ggtitle(title_content) +
+    labs(subtitle=subtitle_content, caption=caption_content) +
+    xlab("time") + 
+    scale_y_continuous(name=y_name, breaks=y_breaks, labels=NULL, limits=y_lims,
+                       sec.axis = sec_axis(~., breaks=y_breaks, labels=y_labs)) +
+    scale_colour_manual(name="Legend", labels=leg_labs, values=leg_vals, breaks=leg_sort) +
+    theme(plot.title=element_text(hjust=0.5), plot.subtitle=element_text(hjust=0.5),
+          axis.text.x = element_text(angle=0, vjust=1),
+          legend.key.width = unit(0.80,"cm"), legend.position="bottom")
+  plot(S_ACP_AC_EP_lattice_sp)
+  
+  ACP_mod_rsh_df <- add_column(ACP_mod_rsh_df, ACMV_value=pmax(ACP_mod_rsh_df$ACP_value, ACP_mod_rsh_df$AC_EP_value, na.rm=TRUE), .after="AC_EP_value")
+  show(AP_PO_mod_rsh_df[1:20,])
+  
+  # Stock values, call current payoffs, call expected payoffs, call market value#####
+  
+  K <- 340
+  
+  
+  Data_df <- ACP_mod_rsh_df
+  length <- N
+  title_content <- bquote(atop("University of Roma \"Tor Vergata\" - Corso di Metodi Probabilistici e Statistici per i Mercati Finanziari", 
+                               "Example of Lattice Plot for American Call Option - Current Payoffs, Expected Payoffs, and Market Values in CRR Model"))
+  subtitle_content <- bquote(paste("market periods N = ", .(N), ", risk free rate r = ", .(r), ", up factor u = ",.(u), ", down factor d = ",.(d), ", risk neutral probability distribution (p,q) = (",.(p),",",.(q),"), exercise price K = ",.(K),"."))
+  caption_content <- "Author: Simone Festa, mat. 0320408"
+  y_breaks_num <- 4 #original 4
+  y_margin <- 0 #original 5
+  y_breaks_low <- floor(min(Data_df$S_value, na.rm =TRUE))-y_margin
+  y_breaks_up <- ceiling(max(Data_df$S_value, na.rm =TRUE))+y_margin
+  y_breaks <- seq(from=y_breaks_low, to=y_breaks_up, length.out=y_breaks_num)
+  y_labs <- format(y_breaks, scientific=FALSE)
+  #K <- 0 
+  y_lims <- c((y_breaks_low-K*y_margin), (y_breaks_up+K*y_margin))
+  y_name <- bquote("stock values")
+  y1_txt <- bquote("stock values")
+  y2_txt <- bquote("call current payoffs")
+  y3_txt <- bquote("call expected payoffs")
+  y4_txt <- bquote("call market values")
+  leg_labs <- c(y1_txt, y2_txt, y3_txt, y4_txt)
+  leg_vals <- c("y1_txt"="black", "y2_txt"="red", "y3_txt"="blue", "y4_txt"="magenta")
+  leg_sort <- c("y1_txt", "y2_txt", "y3_txt", "y4_txt")
+  S_ACP_AC_EP_ACMV_lattice_sp <- ggplot(Data_df, aes(Index, S_value)) + 
+    geom_point(na.rm = TRUE, colour="black") +
+    geom_text(aes(label=round(S_value,3), colour="y1_txt"), hjust=1.0, vjust=-0.7, na.rm=TRUE) + 
+    geom_text(aes(label=round(ACP_value,3), colour="y2_txt"), hjust=1.0, vjust=1.3, na.rm=TRUE) + 
+    geom_text(aes(label=round(AC_EP_value,3), colour="y3_txt"), hjust=-0.2, vjust=1.3, na.rm=TRUE) + 
+    geom_text(aes(label=round(ACMV_value,3), colour="y4_txt"), hjust=-0.2, vjust=-0.7, na.rm = TRUE) + 
+    ggtitle(title_content) +
+    labs(subtitle=subtitle_content, caption=caption_content) +
+    xlab("time") + 
+    scale_y_continuous(name=y_name, breaks=y_breaks, labels=NULL, limits=y_lims,
+                       sec.axis = sec_axis(~., breaks=y_breaks, labels=y_labs)) +
+    scale_colour_manual(name="Legend", labels=leg_labs, values=leg_vals, breaks=leg_sort) +
+    theme(plot.title=element_text(hjust=0.5), plot.subtitle=element_text(hjust=0.5),
+          axis.text.x = element_text(angle=0, vjust=1),
+          legend.key.width = unit(0.80,"cm"), legend.position="bottom")
+  plot(S_ACP_AC_EP_ACMV_lattice_sp)
+  
+  
+ 
