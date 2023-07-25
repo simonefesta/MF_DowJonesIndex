@@ -389,26 +389,31 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
 ###### Calibrazione & Lattice Plot ( ########
 
   
-  # converto il rendimento continuamente composto e i giorni alla maturità in valori numerici (nel csv sono salvati come char)
-  rendimenti_df$r_composite <- as.numeric(rendimenti_df$r_composite)
-  rendimenti_df$days_to_maturity <- as.numeric(rendimenti_df$days_to_maturity)
-  
+
   
 
 
   
   # Model Setting ----------------------------------------------------------------
   
+  # converto il rendimento continuamente composto e i giorni alla maturità in valori numerici (nel csv sono salvati come char)
+  rendimenti_df$r_composite <- as.numeric(rendimenti_df$r_composite)
+  rendimenti_df$days_to_maturity <- as.numeric(rendimenti_df$days_to_maturity)
+  
 
-  deltaT <- as.numeric(maturity_date-data_variabile) #tempo alla maturità, a partire dall'ultima osservazione disponibile.
+  #deltaT <- as.numeric(maturity_date-data_variabile) #tempo alla maturità, a partire dall'ultima osservazione disponibile.
+  deltaT <-1 #anche se tratto opzioni europee, le sto plottando su un grafico americano giornaliero, quindi sto vedendo l'andamento giornaliero, ovvero ampiezza 1 giorno.
+  print(variabilita)
   r <- mean(rendimenti_df$r_composite)
   u <- exp(variabilita*sqrt(deltaT))
   d <- exp(-variabilita*sqrt(deltaT))
   p <- (1 + r - d)/(u-d)
   q <- (u - (1+r))/(u-d) 
-  S_0 <-  338.77
+  S_0 <-  345.09 #338.77
   K <- 340
   N <- 5
+  
+  #https://www.investing.com/indices/1-100-dow-jones-industrial-average-historical-data reference to DJX story
   
   
   # stock values (K not used, è stata impostata a 0) ------------------------------------------------------------
@@ -520,8 +525,8 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
                                "Example of Lattice Plot for American Call Option - Current Payoffs in CRR Model"))
   subtitle_content <- bquote(paste("market periods N = ", .(N), ", risk free rate r = ", .(r), ", up factor u = ",.(u), ", down factor d = ",.(d), ", risk neutral probability distribution (p,q) = (",.(p),",",.(q),"), exercise price K = ",.(K),"."))
   caption_content <- "Author: Simone Festa, mat 032040"
-  y_breaks_num <- 4
-  y_margin <- 5
+  y_breaks_num <- 4 #before 4
+  y_margin <- 0 #before 5
   y_breaks_low <- floor(min(Data_df$S_value, na.rm =TRUE))-y_margin
   y_breaks_up <- ceiling(max(Data_df$S_value, na.rm =TRUE))+y_margin
   y_breaks <- seq(from=y_breaks_low, to=y_breaks_up, length.out=y_breaks_num)
