@@ -16,6 +16,7 @@ library(cowplot)
 library(urca)
 library(moments)
 library(lmtest)
+library(latticeExtra)
 
 ###### Paths #####
 
@@ -263,7 +264,7 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
     lines(0:(ncol(strike_frame)-1), strike_frame[i,], col = i)
   }
    
-   legend("topright", legend = strike_values, col = 1:length(strike_values), lty = 1, pch = 10, title = "Strikes associated",xpd = TRUE)
+   legend("topright", legend = strike_values, col = 1:length(strike_values), lty = 1, pch = 16, title = "Strikes associated",xpd = TRUE)
    
 
   
@@ -280,6 +281,7 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
   ultima_colonna <- clean_strike_frame[, num_colonne]
   # Filtra le colonne "Strike" in base alla presenza dell'elemento "LastPr" nel vettore "clean_strike_frame_strikes"
   strike_legend <- strike_clean_total[strike_clean_read$Call_LastPr %in% clean_strike_frame[, num_colonne]]
+
   
 
     plot(1, 1, type = "n", xlim = c(0,ncol(clean_strike_frame)), ylim = c(min(clean_strike_frame), max(clean_strike_frame)), 
@@ -292,7 +294,7 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
     lines(0:(ncol(clean_strike_frame)-1), clean_strike_frame[i,], col = i)
   }
    
-   legend("topright", legend = strike_legend, col = 1:length(strike_legend), lty = 1, pch = 10, title = "Strikes associated")
+   legend("topright", legend = strike_legend, col = 1:length(strike_legend), lty = 1, pch = 16, title = "Strikes associated")
    
 
   
@@ -386,7 +388,7 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
   # Richiamo della funzione
   rendimenti_famiglia_csv(folder = fedinvest_dir, parte_fissa_nome = "securityprice_", rendimenti_csv_file = "cusipLife.csv")
   
-###### Calibrazione & Lattice Plot ( ########
+###### Calibrazione & Lattice Plot  ########
 
   
 
@@ -395,7 +397,7 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
 
   
   # Model Setting ----------------------------------------------------------------
-  
+
   # converto il rendimento continuamente composto e i giorni alla maturità in valori numerici (nel csv sono salvati come char)
   rendimenti_df$r_composite <- as.numeric(rendimenti_df$r_composite)
   rendimenti_df$days_to_maturity <- as.numeric(rendimenti_df$days_to_maturity)
@@ -403,14 +405,15 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
 
   #deltaT <- as.numeric(maturity_date-data_variabile) #tempo alla maturità, a partire dall'ultima osservazione disponibile.
   deltaT <-1 #anche se tratto opzioni europee, le sto plottando su un grafico americano giornaliero, quindi sto vedendo l'andamento giornaliero, ovvero ampiezza 1 giorno.
-  print(variabilita)
   r <- mean(rendimenti_df$r_composite)
   u <- exp(variabilita*sqrt(deltaT))
   d <- exp(-variabilita*sqrt(deltaT))
   p <- (1 + r - d)/(u-d)
   q <- (u - (1+r))/(u-d) 
-  S_0 <-  345.09 #338.77
-  K <- 340
+  S_0 <-  345.85 #338.77
+  print(strike_legend)
+  chosed_strike <-1 #è il l'i-esimo strike osservabile da strike legend. quindi se voglio il primo, metto 1, il secondo 2 etc...
+  K <- strike_legend[chosed_strike]
   N <- 5
   
   #https://www.investing.com/indices/1-100-dow-jones-industrial-average-historical-data reference to DJX story
@@ -463,7 +466,7 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
   subtitle_content <- bquote(paste("market periods N = ", .(N), ", risk free rate r = ", .(r), ", up factor u = ",.(u), ", down factor d = ",.(d), ", risk neutral probability distribution (p,q) = (",.(p),",",.(q),")."))
   caption_content <- "Author: Simone Festa, mat. 0320408"
   y_breaks_num <- 4
-  y_margin <- 5
+  y_margin <- 0 #was 5
   y_breaks_low <- floor(min(Data_df$S_value, na.rm =TRUE))-y_margin
   y_breaks_up <- ceiling(max(Data_df$S_value, na.rm =TRUE))+y_margin
   y_breaks <- seq(from=y_breaks_low, to=y_breaks_up, length.out=y_breaks_num)
@@ -490,12 +493,32 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
           legend.key.width = unit(0.80,"cm"), legend.position="bottom")
   plot(S_lattice_sp)
   
+  # Comparazione previsione - indice reale#######
+  
+  #requires install.packages("latticeExtra", repos="http://R-Forge.R-project.org")
 
+  # Ho prelevato da https://www.investing.com/indices/1-100-dow-jones-industrial-average-historical-data i dati reali per confrontarli, dal 17/07/2023
+  x<-0:5
+  y<-c(345.85,349.52,350.61,352.25,352.28,354.11)
+  index_real_evolution <- data.frame(x =x, y = y)
+  index_prevision_evolution <- layer_data(S_lattice_sp, 1) #per incompatibilità grafica, scarico i dati del lattice e li metto in un altro grafico su cui ci posso lavorare.
+  print(index_prevision_evolution)
+  comparison_plot <- xyplot(y ~ x, data = index_prevision_evolution, type = "p", col = "black", pch = 16,
+                          main = "Evoluzione del DJX rispetto le previsioni", xlab = "Giorni dall'osservazione", ylab = "DJX value",
+                          panel = function(x, y, ...) {
+                            panel.xyplot(x, y, ...)
+                            panel.text(x = x, y = y, labels = y, pos = 4, offset = 0.5, cex = 0.8, col = "black")
+                            panel.points(index_real_evolution$x, index_real_evolution$y, col = "red", pch = 16)
+                            panel.lines(index_real_evolution$x, index_real_evolution$y, col = "red")
+                            panel.text(x = index_real_evolution$x, y = index_real_evolution$y, labels = index_real_evolution$y, pos = 4, offset = 0.5, cex = 0.8, col = "red")
+                      
+                             })
+  print(comparison_plot)
   
   # Stock values, call current payoffs######
   
   # Still assume K=S_0=100 and consider an American call option we have
-  K <- 340
+  K <- strike_legend[chosed_strike] #345.85
   ACP <- matrix(NA, nrow=N+1, ncol = N+1)
   ACP[1,1] <- 0
   for(n in 1:N){
@@ -586,12 +609,12 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
   subtitle_content <- bquote(paste("market periods N = ", .(N), ", risk free rate r = ", .(r), ", up factor u = ",.(u), ", down factor d = ",.(d), ", risk neutral probability distribution (p,q) = (",.(p),",",.(q),"), exercise price K = ",.(K),"."))
   caption_content <- "Author: Simone Festa, mat. 0320408"
   y_breaks_num <- 4
-  y_margin <- 5
+  y_margin <- 0 #was 4
   y_breaks_low <- floor(min(Data_df$S_value, na.rm =TRUE))-y_margin
   y_breaks_up <- ceiling(max(Data_df$S_value, na.rm =TRUE))+y_margin
   y_breaks <- seq(from=y_breaks_low, to=y_breaks_up, length.out=y_breaks_num)
   y_labs <- format(y_breaks, scientific=FALSE)
-  K <- 0
+  strike_legend[chosed_strike]
   y_lims <- c((y_breaks_low-K*y_margin), (y_breaks_up+K*y_margin))
   y_name <- bquote("stock values")
   y1_txt <- bquote("stock values")
@@ -621,8 +644,7 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
   
   # Stock values, call current payoffs, call expected payoffs, call market value#####
   
-  K <- 340
-  
+  K <- strike_legend[chosed_strike]  
   
   Data_df <- ACP_mod_rsh_df
   length <- N
@@ -665,3 +687,58 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
   
   
  
+##### Osservazioni finali######
+  
+#####Confronto tra payoff immediato tra DJX e strike K#######
+  K <- strike_legend[chosed_strike]
+  print(K)
+  lattice_df <-ACP_mod_rsh_df
+  lattice_df <- na.omit(lattice_df)
+  
+  # Creazione del grafico con etichette dei valori delle colonne "ACP_value", "AC_EP_value" e "ACMV_value"
+  grafico_lattice <- ggplot(lattice_df, aes(x = Index, y = S_value)) +
+    geom_point() +
+    geom_text(aes(label = S_value), nudge_x = -0.2, nudge_y = +0.35, color = "black") +
+    
+    geom_text(aes(label = ACP_value), nudge_x = -0.2, nudge_y = -0.35, color = "red") +
+    #geom_text(aes(label = AC_EP_value), nudge_x = +0.1, nudge_y = -0.25, color = "blue") +
+    #geom_text(aes(label = ACMV_value), nudge_x = +0.1, nudge_y = +0.25, color = "magenta") +
+    labs(title = "Confronto predizione - real data", x = "Giorni dall'osservazione", y = "Valore DJX") +
+    theme_classic() +   guides(color = FALSE)
+    index_real_evolution <- index_real_evolution %>%
+    mutate(Payoff_immediato = y - K)
+    print(index_real_evolution)
+    
+  call_evolution_about_chosed_strike <- clean_strike_frame[chosed_strike,]
+  print(call_evolution_about_chosed_strike)
+  for (i in 1:6){ 
+   print(y[i])
+    index_real_evolution$payoff_c0[i] <- y[i] - K- call_evolution_about_chosed_strike[i]
+    if (index_real_evolution$payoff_c0[i] <=0 ){
+      index_real_evolution$payoff_c0[i] <- 0
+      
+    }
+  }
+  
+  print(index_real_evolution)
+  
+  
+
+  grafico_confronto <- grafico_lattice +
+    geom_line(data = index_real_evolution, aes(x = x, y = y), color = "#230fd6", size = 0.5) +
+    geom_point(data = index_real_evolution, aes(x = x, y = y), color = "#230fd6", size = 1) +
+    geom_text(data = index_real_evolution, aes(x = x, y = y, label = round(Payoff_immediato, 3)), color = "#fc4103", nudge_y = -1.5)+
+    geom_text(data = index_real_evolution, aes(x = x, y = y, label = round(y, 3)), color = "#190d82", vjust = 2) +
+    geom_text(data = index_real_evolution, aes(x = x, y = y, label = payoff_c0), color = "violet", nudge_y = -2.2)
+    
+  
+  
+  # Stampa il grafico con i nuovi punti e le etichette "Payoff"
+  plot(grafico_confronto)
+  
+
+  
+
+  
+  
+  
