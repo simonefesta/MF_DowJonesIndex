@@ -244,12 +244,12 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
         write_csv(strike_frame, strike_file)
       }
         
-   print(strike_frame) 
-   
-   varianze <- apply(strike_frame, 1, var)
-   clean_strike_frame <- subset(strike_frame, varianze != 0)
+
+   varianze <- apply(strike_frame, 1, sd)
+   print(varianze)
+   clean_strike_frame <- subset(strike_frame, varianze >0.4)
    print(clean_strike_frame)
-   
+
    
   # Grafico di tutti gli strike in funzione di lastCallPrice di un dataset ########
    
@@ -519,6 +519,8 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
   
   # Still assume K=S_0=100 and consider an American call option we have
   K <- strike_legend[chosed_strike] #345.85
+  print(strike_legend)
+  print(K)
   ACP <- matrix(NA, nrow=N+1, ncol = N+1)
   ACP[1,1] <- 0
   for(n in 1:N){
@@ -578,12 +580,13 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
   plot(S_ACP_lattice_sp)
   #
   # Stock values, call current payoffs, call expected payoffs####
-  AC_EP <- matrix(NA, nrow=N+1, ncol = N+1)
+  
+  C_EP <- matrix(NA, nrow=N+1, ncol = N+1)
   AC_EP[N+1,] <- ACP[N+1,]
   for(n in N:1){
     for(k in 0:n){AC_EP[n,k] <- round((1/(1+r))*(q*AC_EP[n+1,k]+p*AC_EP[n+1,k+1]),3)}
   }
-  show(AC_EP)
+  #show(AC_EP)
   
   AC_EP_df <- as.data.frame(AC_EP)
   # library("data.table")
@@ -596,10 +599,10 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
   AC_EP_mod_rsh_df <- subset(AC_EP_rsh_df, select = -variable)
   AC_EP_mod_rsh_df <- rename(AC_EP_mod_rsh_df, AC_EP_value=value)
   AC_EP_mod_rsh_df <- add_column(AC_EP_mod_rsh_df, Index=rep(0:(nrow(AC_EP_df)-1), times=ncol(AC_EP_df)), .before="AC_EP_value")
-  show(AC_EP_mod_rsh_df[1:20,])
+  #show(AC_EP_mod_rsh_df[1:20,])
   
   ACP_mod_rsh_df <- add_column(ACP_mod_rsh_df, AC_EP_value=AC_EP_mod_rsh_df$AC_EP_value, .after="ACP_value")
-  show(ACP_mod_rsh_df[1:20,])
+  #show(ACP_mod_rsh_df[1:20,])
   
   # library(ggplot2)
   Data_df <- ACP_mod_rsh_df
@@ -640,7 +643,7 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
   plot(S_ACP_AC_EP_lattice_sp)
   
   ACP_mod_rsh_df <- add_column(ACP_mod_rsh_df, ACMV_value=pmax(ACP_mod_rsh_df$ACP_value, ACP_mod_rsh_df$AC_EP_value, na.rm=TRUE), .after="AC_EP_value")
-  show(AP_PO_mod_rsh_df[1:20,])
+  #show(AP_PO_mod_rsh_df[1:20,])
   
   # Stock values, call current payoffs, call expected payoffs, call market value#####
   
@@ -689,7 +692,7 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
  
 ##### Osservazioni finali######
   
-#####Confronto tra payoff immediato tra DJX e strike K#######
+  # Confronto tra payoff immediato tra DJX e strike K#######
   K <- strike_legend[chosed_strike]
   print(K)
   lattice_df <-ACP_mod_rsh_df
@@ -725,8 +728,8 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
   
 
   grafico_confronto <- grafico_lattice +
-    geom_line(data = index_real_evolution, aes(x = x, y = y), color = "#230fd6", size = 0.5) +
-    geom_point(data = index_real_evolution, aes(x = x, y = y), color = "#230fd6", size = 1) +
+    geom_line(data = index_real_evolution, aes(x = x, y = y), color = "#230fd6", size = 1) +
+    geom_point(data = index_real_evolution, aes(x = x, y = y), color = "#230fd6", size = 1.5) +
     geom_text(data = index_real_evolution, aes(x = x, y = y, label = round(Payoff_immediato, 3)), color = "#fc4103", nudge_y = -1.5)+
     geom_text(data = index_real_evolution, aes(x = x, y = y, label = round(y, 3)), color = "#190d82", vjust = 2) +
     geom_text(data = index_real_evolution, aes(x = x, y = y, label = payoff_c0), color = "violet", nudge_y = -2.2)
