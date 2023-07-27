@@ -173,9 +173,9 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
   
   
   #salvo il tutto nella sottodirectory "options"
-  file_path <- file.path(current_dir, optionsfolder, paste0("DJX_Opt_", data_odierna,".csv"))
-  head(file_path)
-  write.csv(DJX_Opt_df, file_path)
+  opt_path <- file.path(current_dir, optionsfolder, paste0("DJX_Opt_", data_odierna,".csv"))
+  head(opt_path)
+  write.csv(DJX_Opt_df, opt_path)
   
 ###### Plot dei vari strike appena scaricati ####
   
@@ -264,7 +264,7 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
     lines(0:(ncol(strike_frame)-1), strike_frame[i,], col = i)
   }
    
-   legend("topright", legend = strike_values, col = 1:length(strike_values), lty = 1, pch = 16, title = "Strikes associated",xpd = TRUE)
+   legend("topright", legend = strike_values, col = 1:length(strike_values), lty = 1, pch = 16, title = "Strikes associated",xpd = TRUE,cex = 0.55)
    
 
   
@@ -294,9 +294,9 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
     lines(0:(ncol(clean_strike_frame)-1), clean_strike_frame[i,], col = i)
   }
    
-   legend("topright", legend = strike_legend, col = 1:length(strike_legend), lty = 1, pch = 16, title = "Strikes associated")
-   
-
+    legend("topleft", legend = strike_legend, col = 1:length(strike_legend), lty = 1, pch = 16, 
+           title = "Strikes associated", cex = 0.55)
+    
   
 
   
@@ -389,11 +389,6 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
   rendimenti_famiglia_csv(folder = fedinvest_dir, parte_fissa_nome = "securityprice_", rendimenti_csv_file = "cusipLife.csv")
   
 ###### Calibrazione & Lattice Plot  ########
-
-  
-
-  
-
 
   
   # Model Setting ----------------------------------------------------------------
@@ -581,7 +576,7 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
   #
   # Stock values, call current payoffs, call expected payoffs####
   
-  C_EP <- matrix(NA, nrow=N+1, ncol = N+1)
+  AC_EP <- matrix(NA, nrow=N+1, ncol = N+1)
   AC_EP[N+1,] <- ACP[N+1,]
   for(n in N:1){
     for(k in 0:n){AC_EP[n,k] <- round((1/(1+r))*(q*AC_EP[n+1,k]+p*AC_EP[n+1,k+1]),3)}
@@ -728,7 +723,7 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
   
 
   grafico_confronto <- grafico_lattice +
-    geom_line(data = index_real_evolution, aes(x = x, y = y), color = "#230fd6", size = 1) +
+    geom_line(data = index_real_evolution, aes(x = x, y = y), color = "#230fd6", linewidth = 1) +
     geom_point(data = index_real_evolution, aes(x = x, y = y), color = "#230fd6", size = 1.5) +
     geom_text(data = index_real_evolution, aes(x = x, y = y, label = round(Payoff_immediato, 3)), color = "#fc4103", nudge_y = -1.5)+
     geom_text(data = index_real_evolution, aes(x = x, y = y, label = round(y, 3)), color = "#190d82", vjust = 2) +
@@ -738,10 +733,71 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
   
   # Stampa il grafico con i nuovi punti e le etichette "Payoff"
   plot(grafico_confronto)
-  
 
   
+  
+  # Put - Call Parity#####
+  
+  #Copio in nuovo df le triple <callLP,putLP,strike> solo se nessuno dei tre è NA.
+  
+  # Converti le colonne "Call_LastTrTime" e "Put_LastTrTime" in formato data senza l'ora
+  DJX_PCP_df <- DJX_Opt_df %>%
+    mutate(Call_LastTrDate = as.Date(Call_LastTrTime),
+           Put_LastTrDate = as.Date(Put_LastTrTime))
 
+  DJX_PCP_df <- DJX_PCP_df %>% #max due giorni di differenza tra trade call e put
+    filter(abs(difftime(Call_LastTrDate, Put_LastTrDate, units = "days")) <= 2)
+
+  
+  DJX_PCP_df <- DJX_PCP_df %>%
+    select(Strike, Call_LastPr, Put_LastPr) #già ordinate
+  print(DJX_PCP_df)
+  
+
+  S <- 355.20 #è S0, lo devo prendere dal sito investing.com il giorno che esamino la put call parity, poichè ovviamente cambia.
+  DJX_PCP_df$r_stimato <- DJX_PCP_df$Strike / (DJX_PCP_df$Put_LastPr - DJX_PCP_df$Call_LastPr + S) - 1
+  
+  print(DJX_PCP_df)
+  
+  
+  r_mean <-mean(DJX_PCP_df$r_stimato)
+  print(r_mean)
+  
+  DJX_PCP_df$deltaParity<- (DJX_PCP_df$Call_LastPr - DJX_PCP_df$Put_LastPr) - S + DJX_PCP_df$Strike/(1+r_mean)
+  print(DJX_PCP_df)
+  print (mean(DJX_PCP_df$deltaParity))
+  DJX_PCP_df <- subset(DJX_PCP_df, Strike != 345)
+  print(DJX_PCP_df)
+  
+  
+  # Stima il modello di regressione lineare
+  model <- lm(r_stimato ~ Strike, data = DJX_PCP_df)
+  
+  # Estrai i coefficienti stimati del modello
+  intercept <- coef(model)[1]
+  slope <- coef(model)[2]
+  
+  grafico <- ggplot(DJX_PCP_df, aes(x = Strike, y = r_stimato)) +
+    geom_point() +
+    geom_abline(intercept = intercept, slope = slope, color = "red") +
+    geom_text(aes(label = sprintf("(%.2f, %.6f)", Strike, r_stimato)), hjust = 0.5, vjust = 1.7, size = 3) +
+    labs(title = "Retta di regressione per il tasso di rendimento", x = "Strike", y = "r") +
+    theme_classic()
+
+  
+  plot(grafico)
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
   
   
   
