@@ -513,7 +513,7 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
   # Stock values, call current payoffs######
   
   # Still assume K=S_0=100 and consider an American call option we have
-  K <- strike_legend[chosed_strike] #345.85
+  K <- strike_legend[chosed_strike] #345,85
   print(strike_legend)
   print(K)
   ACP <- matrix(NA, nrow=N+1, ncol = N+1)
@@ -745,50 +745,111 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
     mutate(Call_LastTrDate = as.Date(Call_LastTrTime),
            Put_LastTrDate = as.Date(Put_LastTrTime))
 
+  
+  DJX_PCP_df <- DJX_PCP_df %>%
+    select(Strike, Call_LastPr, Put_LastPr,Call_LastTrDate,Put_LastTrDate) #lascio le colonne di interesse
+  print(DJX_PCP_df)
+  
+  
   DJX_PCP_df <- DJX_PCP_df %>% #max due giorni di differenza tra trade call e put
     filter(abs(difftime(Call_LastTrDate, Put_LastTrDate, units = "days")) <= 2)
 
-  
-  DJX_PCP_df <- DJX_PCP_df %>%
-    select(Strike, Call_LastPr, Put_LastPr) #già ordinate
+  DJX_PCP_df <- DJX_PCP_df[complete.cases(DJX_PCP_df$Call_LastPr, DJX_PCP_df$Put_LastPr), ] #tolgo valori NA in quei campi
   print(DJX_PCP_df)
+  
+
   
 
   S <- 355.20 #è S0, lo devo prendere dal sito investing.com il giorno che esamino la put call parity, poichè ovviamente cambia.
   DJX_PCP_df$r_stimato <- DJX_PCP_df$Strike / (DJX_PCP_df$Put_LastPr - DJX_PCP_df$Call_LastPr + S) - 1
   
-  print(DJX_PCP_df)
-  
+
   
   r_mean <-mean(DJX_PCP_df$r_stimato)
   print(r_mean)
   
-  DJX_PCP_df$deltaParity<- (DJX_PCP_df$Call_LastPr - DJX_PCP_df$Put_LastPr) - S + DJX_PCP_df$Strike/(1+r_mean)
+  DJX_PCP_df$deltaParity<- (DJX_PCP_df$Call_LastPr - DJX_PCP_df$Put_LastPr) - S + DJX_PCP_df$Strike/(1+r)
   print(DJX_PCP_df)
   print (mean(DJX_PCP_df$deltaParity))
-  DJX_PCP_df <- subset(DJX_PCP_df, Strike != 345)
-  print(DJX_PCP_df)
   
   
-  # Stima il modello di regressione lineare
-  model <- lm(r_stimato ~ Strike, data = DJX_PCP_df)
+#####Call-Put difference against the strike price######
   
-  # Estrai i coefficienti stimati del modello
-  intercept <- coef(model)[1]
-  slope <- coef(model)[2]
-  
-  grafico <- ggplot(DJX_PCP_df, aes(x = Strike, y = r_stimato)) +
-    geom_point() +
-    geom_abline(intercept = intercept, slope = slope, color = "red") +
-    geom_text(aes(label = sprintf("(%.2f, %.6f)", Strike, r_stimato)), hjust = 0.5, vjust = 1.7, size = 3) +
-    labs(title = "Retta di regressione per il tasso di rendimento", x = "Strike", y = "r") +
-    theme_classic()
-
-  
-  plot(grafico)
-  
-  
-  
+  na.rm <- function(x){x <- as.vector(x[!is.na(as.vector(x))])}
+  x <- DJX_PCP_df$Strike
+  show(x)
+  length(x)
+  y <- DJX_PCP_df$Call_LastPr - DJX_PCP_df$Put_LastPr
+  show(y)
+  length(y)
+  #
+  Data_df <- data.frame(x,y)
+  nrow(Data_df)
+  Data_df <- na.omit(Data_df)
+  nrow(Data_df)
+  head(Data_df,10)
+  tail(Data_df,10)
+  rownames(Data_df) <- 1:nrow(Data_df)
+  nrow(Data_df)
+  head(Data_df,10)
+  tail(Data_df,10)
+  n <- nrow(Data_df)
+  title_content <- bquote(atop("University of Roma \"Tor Vergata\" - \u0040 MPSMF 2022-2023", 
+                               paste("Scatter Plot of the Call-Put Difference Against the Strike Price")))
+  subtitle_content <- bquote(paste("Data set size",~~.(n),~~"sample points;    Evaluation Date 2023-04-11;   Maturity Date 2023-06-16"))
+  caption_content <- "Author: Roberto Monte" 
+  x_breaks_num <- 8
+  x_breaks_low <- min(Data_df$x)
+  x_breaks_up <- max(Data_df$x)
+  x_binwidth <- floor((x_breaks_up-x_breaks_low)/x_breaks_num)
+  x_breaks <- seq(from=x_breaks_low, to=x_breaks_up, by=x_binwidth)
+  if((x_breaks_up-max(x_breaks))>x_binwidth/2){x_breaks <- c(x_breaks,x_breaks_up)}
+  x_labs <- format(x_breaks, scientific=FALSE)
+  J <- 0.2
+  x_lims <- c(x_breaks_low-J*x_binwidth,x_breaks_up+J*x_binwidth)
+  x_name <- bquote("strike")
+  y_breaks_num <- 10
+  y_max <- max(na.rm(Data_df$y))
+  y_min <- min(na.rm(Data_df$y))
+  y_binwidth <- round((y_max-y_min)/y_breaks_num, digits=3)
+  y_breaks_low <- y_min
+  y_breaks_up <- y_max
+  y_breaks <- seq(from=y_breaks_low, to=y_breaks_up, by=y_binwidth)
+  if((y_breaks_up-max(y_breaks))>y_binwidth/2){y_breaks <- c(y_breaks,y_breaks_up)}
+  y_labs <- format(y_breaks, scientific=FALSE)
+  y_name <- bquote("call-put difference")
+  K <- 0.2
+  y_lims <- c((y_breaks_low-K*y_binwidth), (y_breaks_up+K*y_binwidth))
+  col_1 <- bquote("data set sample points")
+  col_2 <- bquote("regression line")
+  col_3 <- bquote("LOESS curve")
+  leg_labs <- c(col_1, col_2, col_3)
+  leg_cols <- c("col_1"="blue", "col_2"="green", "col_3"="red")
+  leg_ord <- c("col_1", "col_2", "col_3")
+  Call_Put_Strike_Pr_2023_04_11_06_16_sp <- ggplot(Data_df, aes(x=x, y=y)) +
+    geom_smooth(alpha=1, linewidth=0.8, linetype="dashed", aes(color="col_3"),
+                method="loess", formula=y ~ x, se=FALSE, fullrange = FALSE) +
+    geom_smooth(alpha=1, linewidth=0.8, linetype="solid", aes(color="col_2"),
+                method="lm" , formula=y ~ x, se=FALSE, fullrange=FALSE) +
+    geom_point(alpha=1, size=1.0, shape=19, aes(color="col_1")) +
+    scale_x_continuous(name=x_name, breaks=x_breaks, label=x_labs, limits=x_lims) +
+    scale_y_continuous(name=y_name, breaks=y_breaks, labels=NULL, limits=y_lims,
+                       sec.axis=sec_axis(~., breaks=y_breaks, labels=y_labs)) +
+    ggtitle(title_content) +
+    labs(subtitle=subtitle_content, caption=caption_content) +
+    scale_colour_manual(name="Legend", labels=leg_labs, values=leg_cols, breaks=leg_ord,
+                        guide=guide_legend(override.aes=list(shape=c(19,NA,NA), 
+                                                             linetype=c("blank", "solid", "dashed")))) +
+    theme(plot.title=element_text(hjust=0.5), plot.subtitle=element_text(hjust=0.5),
+          axis.text.x=element_text(angle=0, vjust=1),
+          legend.key.width=unit(1.0,"cm"), legend.position="bottom")
+  plot(Call_Put_Strike_Pr_2023_04_11_06_16_sp)
+  #
+  PutCall_par_lm <- lm(y~x)
+  summary(PutCall_par_lm)
+  #
+  S_0 <- PutCall_par_lm$coefficients[1]
+  show(S_0) 
   
   
   
