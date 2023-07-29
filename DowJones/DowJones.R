@@ -79,7 +79,7 @@ dow_data$Date <- as.Date(dow_data$Date)
 
 # Crea un nuovo grafico con titolo
 plot(dow_data$Date, dow_data$Close, type = "l", col = "blue", xlab = "Data", ylab = "Close Value",
-     main = "Andamento dell'indice Dow Jones ^DJX")
+     main = "Evoluzione dell'indice Dow Jones ^DJX")
 
 
 
@@ -92,7 +92,7 @@ plot(dow_data$Date, dow_data$Close, type = "l", col = "blue", xlab = "Data", yla
 dow_data$Log_Return <-  c(0, diff(log(dow_data$Close)))
 
 # Crea un grafico dei rendimenti giornalieri
-plot(dow_data$Date, dow_data$Log_Return, type = "l",col = "black", xlab = "Data", ylab = "Rendimento giornaliero log", main = "Rendimento giornaliero log")
+plot(dow_data$Date, dow_data$Log_Return, type = "l",col = "black", xlab = "Data", ylab = "Rendimento giornaliero log", main = "Grafico dei rendimenti logaritmici giornalieri")
 
 # Aggiungi una griglia al grafico
 grid()
@@ -256,7 +256,7 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
    
   plot(1, 1, type = "n", xlim = c(0,ncol(strike_frame)), ylim = c(min(strike_frame), max(strike_frame)), 
        xlab = "Giorni dall'osservazione iniziale", ylab = "LastCallPrice", 
-       main = "Evoluzione del lastCallPrice in funzione di tutti gli strike")
+       main = "Evoluzione del lastCallPrice")
   
 
   # Aggiunta delle linee per ogni riga del dataframe
@@ -286,7 +286,7 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
 
     plot(1, 1, type = "n", xlim = c(0,ncol(clean_strike_frame)), ylim = c(min(clean_strike_frame), max(clean_strike_frame)), 
        xlab = "Giorni dall'osservazione iniziale", ylab = "LastCallPrice", 
-       main = "Evoluzione del lastCallPrice in funzione dei soli strike variati")
+       main = "Evoluzione del lastCallPrice (Trade date)")
   
     
       # Aggiunta delle linee per ogni riga del dataframe
@@ -366,8 +366,7 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
         
         print(r_no_risk_year)
         
-        r_composite <- log(1+r_no_risk_year)/time_to_maturity_days #forse devo dividere per 1, non per maturity days
-        
+        r_composite <- log(1+r_no_risk_year)/time_to_maturity_days
         print(r_composite) #Nota: in rbind uso "<<-" e non "<-" per salvare tali dati nel dataframe globalmente
         
         rendimenti_df <<- rbind(rendimenti_df, c(riga_x[, 7],as.character(data_variabile),time_to_maturity_days, r_no_risk_daily,r_no_risk_year, r_composite)) #prendo la settima colonna, ovvero valore SELL (cusip). as character perchè sennò in csv non viene riconosciuto.
@@ -406,6 +405,8 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
   p <- (1 + r - d)/(u-d)
   q <- (u - (1+r))/(u-d) 
   S_0 <-  345.85 #338.77
+  print(p)
+  print(q)
   print(strike_legend)
   chosed_strike <-1 #è il l'i-esimo strike osservabile da strike legend. quindi se voglio il primo, metto 1, il secondo 2 etc...
   K <- strike_legend[chosed_strike]
@@ -457,7 +458,7 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
   
   Data_df <- S_mod_rsh_df
   title_content <- bquote(atop("University of Roma \"Tor Vergata\" - Corso di Metodi Probabilistici e Statistici per i Mercati Finanziari", 
-                               "Example of Lattice Plot for DJX Index in CRR Model"))
+                               "Lattice Plot per DJX Index nel CRR Model"))
   subtitle_content <- bquote(paste("market periods N = ", .(N), ", risk free rate r = ", .(r), ", up factor u = ",.(u), ", down factor d = ",.(d), ", risk neutral probability distribution (p,q) = (",.(p),",",.(q),")."))
   caption_content <- "Author: Simone Festa, mat. 0320408"
   y_breaks_num <- 4
@@ -542,9 +543,9 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
   Data_df <- ACP_mod_rsh_df
   length <- N
   title_content <- bquote(atop("University of Roma \"Tor Vergata\" - Corso di Metodi Probabilistici e Statistici per i Mercati Finanziari", 
-                               "Example of Lattice Plot for American Call Option - Current Payoffs in CRR Model"))
+                               "Lattice Plot, Call Option - Current Payoffs in CRR Model"))
   subtitle_content <- bquote(paste("market periods N = ", .(N), ", risk free rate r = ", .(r), ", up factor u = ",.(u), ", down factor d = ",.(d), ", risk neutral probability distribution (p,q) = (",.(p),",",.(q),"), exercise price K = ",.(K),"."))
-  caption_content <- "Author: Simone Festa, mat 032040"
+  caption_content <- "Author: Simone Festa, mat. 0320408"
   y_breaks_num <- 4 #before 4
   y_margin <- 0 #before 5
   y_breaks_low <- floor(min(Data_df$S_value, na.rm =TRUE))-y_margin
@@ -603,7 +604,7 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
   Data_df <- ACP_mod_rsh_df
   length <- N
   title_content <- bquote(atop("University of Roma \"Tor Vergata\" - Corso di Metodi Probabilistici e Statistici per i Mercati Finanziari", 
-                               "Example of Lattice Plot for American Call Option - Current Payoffs and Expected Payoffs in CRR Model"))
+                               "Lattice Plot, Call Option - Current Payoffs and Expected Payoffs in CRR Model"))
   subtitle_content <- bquote(paste("market periods N = ", .(N), ", risk free rate r = ", .(r), ", up factor u = ",.(u), ", down factor d = ",.(d), ", risk neutral probability distribution (p,q) = (",.(p),",",.(q),"), exercise price K = ",.(K),"."))
   caption_content <- "Author: Simone Festa, mat. 0320408"
   y_breaks_num <- 4
@@ -647,7 +648,7 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
   Data_df <- ACP_mod_rsh_df
   length <- N
   title_content <- bquote(atop("University of Roma \"Tor Vergata\" - Corso di Metodi Probabilistici e Statistici per i Mercati Finanziari", 
-                               "Example of Lattice Plot for American Call Option - Current Payoffs, Expected Payoffs, and Market Values in CRR Model"))
+                               "Lattice Plot,Call Option - Current Payoffs, Expected Payoffs, and Market Values in CRR Model"))
   subtitle_content <- bquote(paste("market periods N = ", .(N), ", risk free rate r = ", .(r), ", up factor u = ",.(u), ", down factor d = ",.(d), ", risk neutral probability distribution (p,q) = (",.(p),",",.(q),"), exercise price K = ",.(K),"."))
   caption_content <- "Author: Simone Festa, mat. 0320408"
   y_breaks_num <- 4 #original 4
@@ -699,10 +700,11 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
     geom_text(aes(label = S_value), nudge_x = -0.2, nudge_y = +0.35, color = "black") +
     
     geom_text(aes(label = ACP_value), nudge_x = -0.2, nudge_y = -0.35, color = "red") +
-    #geom_text(aes(label = AC_EP_value), nudge_x = +0.1, nudge_y = -0.25, color = "blue") +
-    #geom_text(aes(label = ACMV_value), nudge_x = +0.1, nudge_y = +0.25, color = "magenta") +
-    labs(title = "Confronto predizione - real data", x = "Giorni dall'osservazione", y = "Valore DJX") +
-    theme_classic() +   guides(color = FALSE)
+    labs(title = paste("Confronto predizione - real data", "in funzione di K =", K),subtitle = "Author: Simone Festa, mat. 0320408",
+ x = "Giorni dall'osservazione", y = "Valore DJX") +
+    theme_classic() +   guides(color = none)+
+   theme(plot.title = element_text(hjust = 0.5))+
+    theme(plot.subtitle = element_text(hjust = 0.5))
     index_real_evolution <- index_real_evolution %>%
     mutate(Payoff_immediato = y - K)
     print(index_real_evolution)
@@ -710,7 +712,11 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
   call_evolution_about_chosed_strike <- clean_strike_frame[chosed_strike,]
   print(call_evolution_about_chosed_strike)
   for (i in 1:6){ 
-   print(y[i])
+    if (index_real_evolution$Payoff_immediato[i] <=0 ){
+      index_real_evolution$Payoff_immediato[i] <- 0
+      }
+      
+     print(y[i])
     index_real_evolution$payoff_c0[i] <- y[i] - K- call_evolution_about_chosed_strike[i]
     if (index_real_evolution$payoff_c0[i] <=0 ){
       index_real_evolution$payoff_c0[i] <- 0
@@ -739,7 +745,6 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
   # Put - Call Parity#####
   
   #Copio in nuovo df le triple <callLP,putLP,strike> solo se nessuno dei tre è NA.
-  
   # Converti le colonne "Call_LastTrTime" e "Put_LastTrTime" in formato data senza l'ora
   DJX_PCP_df <- DJX_Opt_df %>%
     mutate(Call_LastTrDate = as.Date(Call_LastTrTime),
@@ -796,8 +801,8 @@ DJX_Opt_df <- data.frame(Indx=1:length(Strike),
   n <- nrow(Data_df)
   title_content <- bquote(atop("University of Roma \"Tor Vergata\" - \u0040 MPSMF 2022-2023", 
                                paste("Scatter Plot of the Call-Put Difference Against the Strike Price")))
-  subtitle_content <- bquote(paste("Data set size",~~.(n),~~"sample points;    Evaluation Date 2023-04-11;   Maturity Date 2023-06-16"))
-  caption_content <- "Author: Roberto Monte" 
+  subtitle_content <- bquote(paste("Evaluation Date 2023-07-27;   Maturity Date 2023-09-14"))
+  caption_content <- "Author: Simone Festa, mat. 0320408" 
   x_breaks_num <- 8
   x_breaks_low <- min(Data_df$x)
   x_breaks_up <- max(Data_df$x)
