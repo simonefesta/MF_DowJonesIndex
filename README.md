@@ -63,11 +63,11 @@ Per completare la calibrazione, partendo dal *rendimento continuamente composto*
   
 - $\tilde{q} = \frac{u-(1+r)}{u - d}$
   
-- $S_0 = 338.77$ (valore iniziale del DJX)
+- $S_0 = 345.85$ (valore iniziale del DJX)
   
 
 NB:
 
 - $\sigma \doteq$ variabilità calcolata precedentemente
   
-- $\Delta t \doteq$ dimensione intervallo di osservazione.
+- $\Delta t \doteq$ dimensione intervallo di osservazione, posto a 1 poichè osservazione e tempo calcolato in giorni.
